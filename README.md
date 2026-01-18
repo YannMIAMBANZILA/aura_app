@@ -1,8 +1,8 @@
 # 🌟 AURA
 > **Boost ton Aura, illumine ta réussite.**
 
-![Aura Banner](assets/banner_placeholder.png) 
-*(Remplacer par l'image de la bannière générée)*
+![Aura Banner](assets/aura_banner.png) 
+
 
 ## 📖 À propos
 
@@ -40,26 +40,32 @@ Les interactions principales de l'élève avec le système.
 ```mermaid
 usecaseDiagram
     actor Élève as "👤 Élève"
-    participant Laura as "🤖 Laura (IA)"
     
-    package "Application AURA" {
+    rectangle "Application AURA" {
         usecase "Lancer une Session Atomique" as UC1
         usecase "Répondre aux questions" as UC2
         usecase "Consulter son Aura (Stats)" as UC3
         usecase "Gérer ses matières" as UC4
+        usecase "Demander un indice (Laura)" as UC5
+    }
+
+    rectangle "Laura (IA)" {
+        usecase "Suggérer une piste socratique" as UC6
     }
 
     Élève --> UC1
     Élève --> UC2
     Élève --> UC3
     Élève --> UC4
-    
-    UC2 ..> Laura : "Demander un indice"
-    Laura --> UC2 : "Suggère une piste"
+    Élève --> UC5
+    UC5 --> UC6
+```
 
+### 2. Diagramme de Séquence
+Flux d'une session atomique complète.
 
-
-    sequenceDiagram
+```mermaid
+sequenceDiagram
     autonumber
     actor User as Élève
     participant App as Flutter App
@@ -82,10 +88,12 @@ usecaseDiagram
 
     App->>DB: Sauvegarde Session & Nouveau Score
     App->>User: Affiche écran "Victoire" (Aura Glow)
+```
 
+### 3. Diagramme de Classes
+Structure des entités principales du système.
 
-
-
+```mermaid
 classDiagram
     class User {
         +UUID id
@@ -120,3 +128,65 @@ classDiagram
     User "1" *-- "*" Session : réalise
     Session "*" -- "1" Subject : concerne
     Session "1" *-- "5..*" Question : contient
+```
+
+---
+
+## 🎨 Thème Digital Bioluminescence
+
+Le thème dark mode "Digital Bioluminescence" est intégré dans l'application avec :
+
+- **Deep Space Blue** (#0F172A) : Couleur de fond principale
+- **Electric Cyan** (#00F0FF) : Couleur primaire pour les accents
+- **Mint Neon** (#4ADE80) : Couleur de succès
+- **Polices** : Inter (corps) et Space Grotesk (titres) via Google Fonts
+
+Le thème est disponible dans `lib/config/theme.dart` et peut être utilisé via `AppTheme.darkTheme`.
+
+---
+
+## 🚀 Installation & Démarrage
+
+### Prérequis
+- Flutter SDK (>=3.0.0)
+- Dart SDK
+- Un émulateur ou appareil physique configuré
+
+### Installation
+
+1. Cloner le repository
+```bash
+git clone <repo-url>
+cd aura_app
+```
+
+2. Installer les dépendances
+```bash
+flutter pub get
+```
+
+3. Lancer l'application
+```bash
+flutter run
+```
+
+### Structure du Projet
+
+```
+aura_app/
+├── lib/
+│   ├── config/
+│   │   └── theme.dart          # Thème Digital Bioluminescence
+│   ├── features/               # Modules fonctionnels
+│   │   ├── auth/
+│   │   ├── home/
+│   │   └── learning/
+│   ├── models/                 # Modèles de données
+│   ├── providers/              # State management
+│   ├── services/               # Services (API, IA, etc.)
+│   ├── widgets/                # Composants réutilisables
+│   └── main.dart               # Point d'entrée de l'application
+└── pubspec.yaml
+```
+
+---
