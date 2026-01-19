@@ -1,3 +1,4 @@
+import 'package:aura_app/features/learning/screens/result_sreen.dart';
 import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart';
 import '../../learning/widgets/flashcard_widget.dart';
@@ -38,6 +39,7 @@ class _SessionScreenState extends State<SessionScreen> {
 
   // 2. L'état du jeu (Ce qui change)
   int _currentIndex = 0;        // Quelle question on regarde ?
+  int _score = 0;               // Le score de l'élève
   int? _selectedAnswerIndex;    // Qu'est-ce que l'élève a cliqué ?
   bool _isAnswered = false;     // A-t-il validé ?
   String? _lauraMessage;        // Ce que dit Laura
@@ -59,6 +61,7 @@ class _SessionScreenState extends State<SessionScreen> {
       bool isCorrect = index == _questions[_currentIndex].correctOptionIndex;
 
       if (isCorrect) {
+        _score += 50; // On ajoute 50 points au score
         _lauraMessage = "Excellent ! Ton Aura grandit. ✨";
         // On attend 1.5 seconde avant de passer à la suite
         Future.delayed(const Duration(milliseconds: 1500), _nextQuestion);
@@ -80,8 +83,16 @@ class _SessionScreenState extends State<SessionScreen> {
         _lauraMessage = "Focus. Prochaine question.";
       });
     } else {
-      // Fin de session !
-      Navigator.pop(context); // On revient à l'accueil pour l'instant
+      // FIN DE SESSION -> On lance l'écran de victoire
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResultScreen(
+          score: _score,
+          totalQuestions: _questions.length,
+        ),
+      ),
+    );
     }
   }
 
