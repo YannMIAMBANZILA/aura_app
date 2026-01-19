@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:aura_app/config/theme.dart'; // Vérifie bien le chemin d'import
+import 'package:aura_app/config/theme.dart'; 
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/aura_orb.dart';
+import '../../learning/screens/session_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -49,9 +50,6 @@ class DashboardScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Action future : Lancer session
-                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AuraColors.electricCyan.withOpacity(0.1),
                     shadowColor: AuraColors.electricCyan,
@@ -61,6 +59,9 @@ class DashboardScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SessionScreen()));
+                  },
                   child: Text(
                     "LANCER UNE SESSION",
                     style: GoogleFonts.spaceGrotesk(
