@@ -1,8 +1,9 @@
-import 'package:aura_app/features/learning/screens/result_sreen.dart';
 import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart';
+import '../../../features/learning/screens/result_sreen.dart';
 import '../../learning/widgets/flashcard_widget.dart';
 import '../../../models/question.dart';
+import '../../../services/ai_service.dart'; 
 
 class SessionScreen extends StatefulWidget {
   const SessionScreen({super.key});
@@ -12,7 +13,7 @@ class SessionScreen extends StatefulWidget {
 }
 
 class _SessionScreenState extends State<SessionScreen> {
-  // 1. Nos données (Simulées pour l'instant)
+  // 1. Nos données
   final List<Question> _questions = [
     Question(
       subject: "HISTOIRE",
@@ -37,12 +38,12 @@ class _SessionScreenState extends State<SessionScreen> {
     ),
   ];
 
-  // 2. L'état du jeu (Ce qui change)
-  int _currentIndex = 0;        // Quelle question on regarde ?
-  int _score = 0;               // Le score de l'élève
-  int? _selectedAnswerIndex;    // Qu'est-ce que l'élève a cliqué ?
-  bool _isAnswered = false;     // A-t-il validé ?
-  String? _lauraMessage;        // Ce que dit Laura
+  // 2. L'état du jeu
+  int _currentIndex = 0;
+  int _score = 0;
+  int? _selectedAnswerIndex;
+  bool _isAnswered = false;
+  String? _lauraMessage;
 
   @override
   void initState() {
@@ -50,28 +51,54 @@ class _SessionScreenState extends State<SessionScreen> {
     _lauraMessage = "Laura t'observe...";
   }
 
-  // 3. La logique quand on clique sur une réponse
-  void _checkAnswer(int index) {
-    if (_isAnswered) return; // On empêche de cliquer 2 fois
+  // 3. La logique IA (Fusionnée et corrigée)
+  Future<void> _checkAnswer(int index) async {
+    if (_isAnswered) return;
 
+    // Mise à jour visuelle immédiate
     setState(() {
       _selectedAnswerIndex = index;
       _isAnswered = true;
-
-      bool isCorrect = index == _questions[_currentIndex].correctOptionIndex;
-
-      if (isCorrect) {
-        _score += 50; // On ajoute 50 points au score
-        _lauraMessage = "Excellent ! Ton Aura grandit. ✨";
-        // On attend 1.5 seconde avant de passer à la suite
-        Future.delayed(const Duration(milliseconds: 1500), _nextQuestion);
-      } else {
-        _lauraMessage = "Oups... ${_questions[_currentIndex].hint}";
-        // Ici on laisse l'élève lire l'indice, il devra cliquer pour passer (optionnel)
-        // Pour ce MVP, on passe aussi à la suite après un délai plus long
-        Future.delayed(const Duration(milliseconds: 2500), _nextQuestion);
-      }
     });
+
+    bool isCorrect = index == _questions[_currentIndex].correctOptionIndex;
+
+    if (isCorrect) {
+      // ✅ VICTOIRE
+      setState(() {
+        _score += 50;
+        _lauraMessage = "Excellent ! Ton Aura grandit. ✨";
+      });
+      Future.delayed(const Duration(milliseconds: 1500), _nextQuestion);
+    } else {
+      // ❌ ERREUR -> APPEL IA
+      setState(() {
+        _lauraMessage = "Laura analyse ton erreur...";
+      });
+
+      // Récupération des données pour l'IA
+      final question = _questions[_currentIndex];
+      final wrongAnswer = question.options[index];
+      final rightAnswer = question.options[question.correctOptionIndex];
+
+      // Appel au service (Asynchrone)
+      final hint = await OpenAIService.getHint(
+        question: question.text,
+        userAnswer: wrongAnswer,
+        correctAnswer: rightAnswer,
+        subject: question.subject,
+      );
+
+      // Mise à jour du message si l'écran est toujours là
+      if (mounted) {
+        setState(() {
+          _lauraMessage = hint;
+        });
+      }
+
+      // Délai pour lire l'indice
+      Future.delayed(const Duration(milliseconds: 4000), _nextQuestion);
+    }
   }
 
   void _nextQuestion() {
@@ -83,16 +110,16 @@ class _SessionScreenState extends State<SessionScreen> {
         _lauraMessage = "Focus. Prochaine question.";
       });
     } else {
-      // FIN DE SESSION -> On lance l'écran de victoire
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResultScreen(
-          score: _score,
-          totalQuestions: _questions.length,
+      // FIN DE SESSION
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ResultScreen(
+            score: _score,
+            totalQuestions: _questions.length,
+          ),
         ),
-      ),
-    );
+      );
     }
   }
 
@@ -117,7 +144,7 @@ class _SessionScreenState extends State<SessionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Barre de progression dynamique
+              // Barre de progression
               LinearProgressIndicator(
                 value: (_currentIndex + 1) / _questions.length,
                 backgroundColor: AuraColors.abyssalGrey,
@@ -127,11 +154,11 @@ class _SessionScreenState extends State<SessionScreen> {
               ),
               const SizedBox(height: 40),
 
-              // Laura (Dynamique)
+              // Laura (Zone de message)
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: Row(
-                  key: ValueKey(_lauraMessage), // Permet l'animation du texte
+                  key: ValueKey(_lauraMessage),
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
@@ -142,7 +169,7 @@ class _SessionScreenState extends State<SessionScreen> {
                     const SizedBox(width: 12),
                     Flexible(
                       child: Text(
-                        _lauraMessage ?? "...", // Si _lauraMessage est null, on affiche une chaîne vide pour éviter une erreur
+                        _lauraMessage ?? "...",
                         style: const TextStyle(color: Colors.white70),
                         textAlign: TextAlign.center,
                       ),
@@ -153,7 +180,7 @@ class _SessionScreenState extends State<SessionScreen> {
               
               const Spacer(),
 
-              // La Carte (Dynamique)
+              // Carte de Question
               FlashcardWidget(
                 subject: currentQuestion.subject,
                 question: currentQuestion.text,
@@ -161,7 +188,7 @@ class _SessionScreenState extends State<SessionScreen> {
 
               const Spacer(),
 
-              // Liste des boutons (Générée automatiquement)
+              // Liste des Réponses
               ...List.generate(currentQuestion.options.length, (index) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
@@ -181,7 +208,7 @@ class _SessionScreenState extends State<SessionScreen> {
     );
   }
 
-  // 4. Le Design du bouton qui change de couleur
+  // Design des boutons
   Widget _buildAnswerButton({
     required String text,
     required int index,
@@ -191,15 +218,12 @@ class _SessionScreenState extends State<SessionScreen> {
     Color textColor = AuraColors.starlightWhite;
     Color? backgroundColor;
 
-    // Si l'utilisateur a répondu, on change les couleurs
     if (_isAnswered) {
       if (index == correctIndex) {
-        // C'est la bonne réponse -> VERT
         borderColor = AuraColors.mintNeon;
         textColor = AuraColors.mintNeon;
         backgroundColor = AuraColors.mintNeon.withOpacity(0.1);
       } else if (index == _selectedAnswerIndex) {
-        // C'est la mauvaise réponse cliquée -> ROUGE
         borderColor = AuraColors.softCoral;
         textColor = AuraColors.softCoral;
         backgroundColor = AuraColors.softCoral.withOpacity(0.1);
@@ -207,6 +231,7 @@ class _SessionScreenState extends State<SessionScreen> {
     }
 
     return OutlinedButton(
+      // 👇 ICI : On appelle bien la fonction qui contient l'IA
       onPressed: () => _checkAnswer(index),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
