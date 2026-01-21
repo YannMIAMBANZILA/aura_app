@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../dashboard/widgets/aura_orb.dart'; // On réutilise notre Orbe !
+import '../../../providers/user_provider.dart';
 
-class ResultScreen extends StatelessWidget {
+class ResultScreen extends ConsumerStatefulWidget {
   final int score;
   final int totalQuestions;
 
@@ -13,9 +15,24 @@ class ResultScreen extends StatelessWidget {
   });
 
   @override
+  ConsumerState<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends ConsumerState<ResultScreen> {
+  @override
+  void initState() {
+    super.initState(); // On ajoute les points dès que l'écran est chargé
+    // On utilise Future.microtask pour ne pas bloquer l'UI
+    Future.microtask(() {
+    ref.read(auraProvider.notifier).addPoints(widget.score);
+  });
+  }
+
+
+  @override
   Widget build(BuildContext context) {
     // Calcul du pourcentage de réussite
-    final percentage = (score / totalQuestions) * 100;
+    final percentage = (widget.score / widget.totalQuestions) * 100;
     String title = "Session Validée";
     String subtitle = "Ton Aura se stabilise.";
     Color glowColor = AuraColors.electricCyan;
@@ -46,7 +63,7 @@ class ResultScreen extends StatelessWidget {
                 children: [
                   AuraOrb(size: 250), // Notre widget existant
                   Text(
-                    "+$score", // Le score au centre
+                    "+${widget.score}", // Le score au centre
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       fontSize: 48,
                       color: Colors.white,

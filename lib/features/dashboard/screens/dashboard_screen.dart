@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/aura_orb.dart';
 import '../../learning/screens/session_screen.dart';
+import '../../../providers/user_provider.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentAura = ref.watch(auraProvider);
+    
+    print("DEBUG AURA: La valeur actuelle est $currentAura");
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -22,6 +28,23 @@ class DashboardScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   letterSpacing: 4,
                   fontWeight: FontWeight.bold
+                ),
+              ),
+
+
+              // --- LE SCORE EST ICI ---
+              Text(
+                "$currentAura",
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 64, // Très gros
+                  fontWeight: FontWeight.bold,
+                  color: AuraColors.electricCyan,
+                  shadows: [
+                    Shadow(
+                      color: AuraColors.electricCyan.withOpacity(0.8),
+                      blurRadius: 30,
+                    )
+                  ],
                 ),
               ),
               const SizedBox(height: 60),
