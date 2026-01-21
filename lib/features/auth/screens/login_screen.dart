@@ -1,10 +1,10 @@
-import 'package:aura_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:aura_app/config/theme.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
+import '../../../providers/user_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -14,63 +14,87 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  
+  // Contrôleurs
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  
   bool _isLoading = false;
+  // Mode "Inscription" ou "Connexion"
+  bool _isRegistering = false; 
 
-  // 1. Fonction de Connexion (Login)
+  // 1. GESTION DE LA VALIDATION DU FORMULAIRE
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      if (_isRegistering) {
+        await _signUp();
+      } else {
+        await _signIn();
+      }
+    } on AuthException catch (e) {
+      _showError(e.message);
+    } catch (e) {
+      _showError("Une erreur est survenue : $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // 2. LOGIQUE DE CONNEXION
   Future<void> _signIn() async {
-    setState(() => _isLoading = true);
-    try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
+    await Supabase.instance.client.auth.signInWithPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+    if (mounted) {
       await ref.read(auraProvider.notifier).syncLocalToCloud();
-
-      if (mounted) {
-        // Redirection vers le Dashboard
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
-      }
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (e) {
-      _showError("Erreur inattendue");
+      _goToDashboard();
     }
-    if (mounted) setState(() => _isLoading = false);
   }
 
-  // 2. Fonction d'Inscription (Sign Up)
+  // 3. LOGIQUE D'INSCRIPTION (AVEC PSEUDO)
   Future<void> _signUp() async {
-    setState(() => _isLoading = true);
-    try {
-      await Supabase.instance.client.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+    final email = _emailController.text.trim();
+    final username = _usernameController.text.trim();
 
-      await ref.read(auraProvider.notifier).syncLocalToCloud();
+    // A. Inscription Auth
+    final response = await Supabase.instance.client.auth.signUp(
+      email: email,
+      password: _passwordController.text.trim(),
+    );
 
-      _showSuccess("Compte créé ! Tu es connecté.");
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
-      }
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (e) {
-      _showError("Erreur lors de l'inscription");
+    // B. Mise à jour du Profil (Pseudo + Email)
+    if (response.user != null) {
+      await Supabase.instance.client
+          .from('profiles')
+          .update({
+            'username': username, // On stocke le vrai pseudo
+            'email': email,       // On stocke l'email dans sa colonne
+          })
+          .eq('id', response.user!.id);
     }
-    if (mounted) setState(() => _isLoading = false);
+
+    // C. Synchro
+    if (mounted) {
+      await ref.read(auraProvider.notifier).syncLocalToCloud();
+      _showSuccess("Bienvenue, $username !");
+      _goToDashboard();
+    }
   }
 
-  // Helpers pour afficher les messages
+  void _goToDashboard() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const DashboardScreen()),
+    );
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: AuraColors.softCoral),
@@ -82,143 +106,191 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       SnackBar(content: Text(message), backgroundColor: AuraColors.mintNeon),
     );
   }
-
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                "IDENTIFICATION",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  letterSpacing: 4, 
-                  color: AuraColors.electricCyan
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              
-              // Champ Email
-              _buildTextField(
-                controller: _emailController,
-                label: "Email",
-                icon: Icons.email_outlined,
-              ),
-              const SizedBox(height: 16),
-              
-              // Champ Mot de passe
-              _buildTextField(
-                controller: _passwordController,
-                label: "Mot de passe",
-                icon: Icons.lock_outline,
-                isPassword: true,
-              ),
-              
-              const SizedBox(height: 40),
-
-              // Bouton SE CONNECTER
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator(color: AuraColors.electricCyan))
-              else
-                ElevatedButton(
-                  onPressed: _signIn,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AuraColors.electricCyan,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+      // Center le contenu globalement
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _isRegistering ? "NOUVEAU COMPTE" : "IDENTIFICATION",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      letterSpacing: 4, 
+                      color: AuraColors.electricCyan
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  child: Text("SE CONNECTER", style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
-                ),
+                  const SizedBox(height: 40),
 
-              const SizedBox(height: 16),
+                  if (_isRegistering) ...[
+                    _buildTextField(
+                      controller: _usernameController,
+                      label: "Pseudo",
+                      icon: Icons.person_outline,
+                      validator: (value) => (value == null || value.length < 3) ? '3 caractères min.' : null,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  _buildTextField(
+                    controller: _emailController,
+                    label: "Email",
+                    icon: Icons.email_outlined,
+                    validator: (value) => (value != null && value.contains('@')) ? null : 'Email invalide',
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  _buildTextField(
+                    controller: _passwordController,
+                    label: "Mot de passe",
+                    icon: Icons.lock_outline,
+                    isPassword: true,
+                    validator: (value) => (value != null && value.length >= 6) ? null : '6 caractères min.',
+                  ),
+                  
+                  const SizedBox(height: 32),
 
-              // Bouton CRÉER UN COMPTE
-              OutlinedButton(
-                onPressed: _signUp,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AuraColors.starlightWhite),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text("CRÉER UN COMPTE", style: TextStyle(color: Colors.white)),
+                  if (_isLoading)
+                    const Center(child: CircularProgressIndicator(color: AuraColors.electricCyan))
+                  else
+                    ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AuraColors.electricCyan,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: Text(
+                        _isRegistering ? "S'INSCRIRE" : "SE CONNECTER",
+                        style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+
+                  const SizedBox(height: 24),
+                  
+                  // Séparateur
+                  Row(children: [
+                    const Expanded(child: Divider(color: Colors.white24)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text("OU", style: GoogleFonts.spaceGrotesk(color: Colors.white24, fontSize: 12)),
+                    ),
+                    const Expanded(child: Divider(color: Colors.white24)),
+                  ]),
+                  
+                  const SizedBox(height: 24),
+
+                  // 🦋 BOUTON PRONOTE (Visuel)
+                  _buildSocialButton(
+                    label: "Continuer avec Pronote",
+                    color: const Color(0xFF005c29), // Vert Pronote approx
+                    icon: Icons.school, // Faute de logo SVG pour l'instant
+                    onTap: () => _showError("Intégration Pronote bientôt disponible !"),
+                  ),
+                  
+                  const SizedBox(height: 12),
+
+                  // BOUTON GOOGLE
+                  _buildSocialButton(
+                    label: "Continuer avec Google",
+                    color: Colors.white.withOpacity(0.05),
+                    icon: Icons.g_mobiledata,
+                    onTap: () => _showError("Config Google en cours..."),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Bascule Inscription / Connexion
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isRegistering = !_isRegistering;
+                        _formKey.currentState?.reset();
+                      });
+                    },
+                    child: RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.spaceGrotesk(color: Colors.white70),
+                        children: [
+                          TextSpan(text: _isRegistering ? "Déjà un compte ? " : "Pas encore de compte ? "),
+                          TextSpan(
+                            text: _isRegistering ? "Se connecter" : "Créer un compte",
+                            style: const TextStyle(color: AuraColors.electricCyan, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Mode Invité
+                  TextButton(
+                    onPressed: _goToDashboard,
+                    child: Text("Continuer en Invité", style: GoogleFonts.spaceGrotesk(color: Colors.white30, fontSize: 12)),
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 40),
-              const Divider(color: Colors.white24),
-              const SizedBox(height: 20),
-
-              // Bouton GOOGLE (Visuel pour l'instant)
-              OutlinedButton.icon(
-                onPressed: () {
-                  _showError("Configuration Google en cours...");
-                  // On implémentera ça à l'étape suivante !
-                },
-                icon: const Icon(Icons.g_mobiledata, size: 30, color: Colors.white),
-                label: const Text("Continuer avec Google", style: TextStyle(color: Colors.white)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                ),
-              ),
-              // ... après le bouton Google ...
-
-const SizedBox(height: 24),
-
-// BOUTON MODE INVITÉ
-TextButton(
-  onPressed: () {
-    // On va directement au Dashboard sans s'authentifier
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const DashboardScreen()),
-    );
-  },
-  child: Text(
-    "Continuer sans compte (Mode Invité)",
-    style: GoogleFonts.spaceGrotesk(
-      color: Colors.white54,
-      decoration: TextDecoration.underline,
-      fontSize: 14,
-    ),
-  ),
-),
-            ],
-
+            ),
           ),
         ),
       ),
     );
   }
 
-  // Widget utilitaire pour le style des champs
+  // Helper pour les champs texte
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     bool isPassword = false,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       obscureText: isPassword,
+      validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.white60),
         prefixIcon: Icon(icon, color: AuraColors.electricCyan),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AuraColors.electricCyan.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AuraColors.electricCyan),
-        ),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AuraColors.electricCyan.withOpacity(0.3))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AuraColors.electricCyan)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AuraColors.softCoral)),
+        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AuraColors.softCoral)),
         filled: true,
         fillColor: AuraColors.abyssalGrey,
+      ),
+    );
+  }
+
+  // Helper pour les boutons sociaux
+  Widget _buildSocialButton({required String label, required Color color, required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+          ],
+        ),
       ),
     );
   }
