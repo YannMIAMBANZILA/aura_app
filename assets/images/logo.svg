@@ -1,0 +1,41 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="512" height="512" fill="#121212"/>
+    <filter id="blue-glow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur5"/>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur10"/>
+    <feMerge>
+    <feMergeNode in="blur10"/>
+    <feMergeNode in="blur5"/>
+    <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+    </filter>
+    <g filter="url(#blue-glow)">
+    <path d="M256 110L235 145H277L256 110ZM253 160V430M259 160V430" stroke="#00F5D4" stroke-width="6" stroke-linecap="round"/>
+    <path d="M256 430C256 430 210 400 180 350C150 300 160 240 190 200C220 160 256 180 256 180" stroke="url(#paint0_linear_aura)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M256 430C256 430 302 400 332 350C362 300 352 240 322 200C292 160 256 180 256 180" stroke="url(#paint1_linear_aura)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M190 200C190 200 160 180 130 210C100 240 110 300 140 340" stroke="url(#paint2_linear_aura)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M322 200C322 200 352 180 382 210C412 240 402 300 372 340" stroke="url(#paint3_linear_aura)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M190 270C190 270 220 250 240 270" stroke="#00DDEB" stroke-width="4" stroke-linecap="round"/>
+    <path d="M322 270C322 270 292 250 272 270" stroke="#00DDEB" stroke-width="4" stroke-linecap="round"/>
+    <path d="M150 250C150 250 170 230 190 240" stroke="#00B8D4" stroke-width="4" stroke-linecap="round"/>
+    <path d="M362 250C362 250 342 230 322 240" stroke="#00B8D4" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <defs>
+    <linearGradient id="paint0_linear_aura" x1="256" y1="430" x2="190" y2="200" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#00F5D4"/>
+    <stop offset="1" stop-color="#0057FF"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear_aura" x1="256" y1="430" x2="322" y2="200" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#00F5D4"/>
+    <stop offset="1" stop-color="#0057FF"/>
+    </linearGradient>
+    <linearGradient id="paint2_linear_aura" x1="190" y1="200" x2="140" y2="340" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#0057FF"/>
+    <stop offset="1" stop-color="#00DDEB"/>
+    </linearGradient>
+    <linearGradient id="paint3_linear_aura" x1="322" y1="200" x2="372" y2="340" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#0057FF"/>
+    <stop offset="1" stop-color="#00DDEB"/>
+    </linearGradient>
+    </defs>
+    </svg>

@@ -16,15 +16,36 @@ dependencies:
   flutter_dotenv: ^6.0.0
   supabase_flutter: ^2.12.0
   intl: ^0.20.2
+  confetti: ^0.8.0
+  flutter_native_splash: ^2.3.1 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: "^0.13.1" 
 
 flutter:
   uses-material-design: true
 
   assets:
-  - .env
-  - assets/
+    - .env
+    - assets/images/
+
+# --- CONFIGURATION ---
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#121212"
+  adaptive_icon_foreground: "assets/images/logo.png"
+
+flutter_native_splash:
+  color: "#121212"
+  image: "assets/images/logo.png"
+  android_12:
+    color: "#121212"
+    image: "assets/images/logo.png"
+  web: false
