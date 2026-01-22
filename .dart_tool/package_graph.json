@@ -12,6 +12,7 @@
         "flutter_riverpod",
         "google_fonts",
         "http",
+        "intl",
         "shared_preferences",
         "supabase_flutter"
       ],
@@ -43,6 +44,15 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "intl",
+      "version": "0.20.2",
+      "dependencies": [
+        "clock",
+        "meta",
+        "path"
       ]
     },
     {

@@ -7,6 +7,7 @@ import '../widgets/aura_orb.dart';
 import '../../learning/screens/session_screen.dart';
 import '../../../providers/user_provider.dart';
 import '../../auth/screens/login_screen.dart';
+import 'profile_screen.dart'; 
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -16,7 +17,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  String? _username; // Pour stocker le pseudo
+  String? _username;
   bool _isGuest = true;
 
   @override
@@ -29,7 +30,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       setState(() => _isGuest = false);
-      // On récupère le pseudo depuis la table profiles
       try {
         final data = await Supabase.instance.client
             .from('profiles')
@@ -43,7 +43,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           });
         }
       } catch (e) {
-        // En cas d'erreur (hors ligne), on garde l'affichage par défaut
+        // En cas d'erreur silencieuse
       }
     }
   }
@@ -59,21 +59,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 1. HEADER PERSONNALISÉ
+              // 1. HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const SizedBox(width: 40), // Équilibre visuel
+                  const SizedBox(width: 40), // Pour équilibrer
                   
                   // TITRE DYNAMIQUE
                   Column(
                     children: [
                       Text(
-                        _username != null ? "TON AURA ${_username!.toUpperCase()}" : "TON AURA",
+                        _username != null ? "AURA DE ${_username!.toUpperCase()}" : "TON AURA",
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           letterSpacing: 4,
                           fontWeight: FontWeight.bold,
-                          color: _isGuest ? Colors.white70 : AuraColors.electricCyan, // Cyan si connecté
+                          color: _isGuest ? Colors.white70 : AuraColors.electricCyan,
                         ),
                       ),
                       if (_isGuest)
@@ -84,13 +84,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
 
-                  // BOUTON PROFIL
+                  // BOUTON PROFIL 
                   IconButton(
                     onPressed: () {
                       if (_isGuest) {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
                       } else {
-                        _showLogoutDialog(context);
+                        Navigator.push(
+                          context, 
+                          MaterialPageRoute(builder: (_) => const ProfileScreen())
+                        );
                       }
                     },
                     icon: Icon(
@@ -103,7 +106,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
               const Spacer(),
 
-              // LE SCORE
+              // SCORE
               Text(
                 "$currentAura",
                 style: GoogleFonts.spaceGrotesk(
@@ -166,30 +169,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AuraColors.abyssalGrey,
-        title: const Text("Compte", style: TextStyle(color: Colors.white)),
-        content: Text("Au revoir $_username, veux-tu te déconnecter ?", style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Annuler")),
-          TextButton(
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                Navigator.pop(context);
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardScreen()));
-              }
-            },
-            child: const Text("Se déconnecter", style: TextStyle(color: AuraColors.softCoral)),
-          ),
-        ],
       ),
     );
   }

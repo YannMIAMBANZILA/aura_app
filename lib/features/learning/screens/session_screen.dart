@@ -1,46 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart';
-import '../../../features/learning/screens/result_sreen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../screens/result_sreen.dart';
 import '../../learning/widgets/flashcard_widget.dart';
 import '../../../models/question.dart';
-import '../../../services/ai_service.dart'; 
+import '../../../providers/user_provider.dart';
 
-class SessionScreen extends StatefulWidget {
+class SessionScreen extends ConsumerStatefulWidget {
   const SessionScreen({super.key});
 
   @override
-  State<SessionScreen> createState() => _SessionScreenState();
+  ConsumerState<SessionScreen> createState() => _SessionScreenState();
 }
 
-class _SessionScreenState extends State<SessionScreen> {
-  // 1. Nos données
-  final List<Question> _questions = [
-    Question(
-      subject: "HISTOIRE",
-      text: "Quelle est la date exacte de la chute du Mur de Berlin ?",
-      options: ["9 Novembre 1989", "8 Mai 1945", "25 Décembre 1991"],
-      correctOptionIndex: 0,
-      hint: "C'était juste avant la fin des années 80, en automne.",
-    ),
-    Question(
-      subject: "MATHS",
-      text: "Quelle est la dérivée de f(x) = x² ?",
-      options: ["x", "2x", "2"],
-      correctOptionIndex: 1,
-      hint: "Rappelle-toi la formule nx^(n-1).",
-    ),
-    Question(
-      subject: "ANGLAIS",
-      text: "Comment traduit-on 'Bioluminescence' ?",
-      options: ["Biolight", "Living Light", "Bioluminescence"],
-      correctOptionIndex: 2,
-      hint: "C'est un mot transparent, presque identique en français.",
-    ),
-  ];
-
-  // 2. L'état du jeu
+class _SessionScreenState extends ConsumerState<SessionScreen> {
+  List<Question> _questions = [];
+  bool _isLoading = true;
   int _currentIndex = 0;
-  int _score = 0;
+  int _scoreSession = 0;
   int? _selectedAnswerIndex;
   bool _isAnswered = false;
   String? _lauraMessage;
@@ -48,14 +26,46 @@ class _SessionScreenState extends State<SessionScreen> {
   @override
   void initState() {
     super.initState();
-    _lauraMessage = "Laura t'observe...";
+    _lauraMessage = "Laura initialise la session...";
+    _fetchQuestions();
   }
 
-  // 3. La logique IA (Fusionnée et corrigée)
+  Future<void> _fetchQuestions() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('questions')
+          .select()
+          .limit(10); // On en prend 10 pour avoir du choix
+
+      final data = response as List<dynamic>;
+      List<Question> loadedQuestions = data.map((json) => Question.fromMap(json)).toList();
+
+      loadedQuestions.shuffle(); 
+      // On garde 3 questions pour une session rapide
+      if (loadedQuestions.length > 3) {
+        loadedQuestions = loadedQuestions.take(3).toList();
+      }
+
+      if (mounted) {
+        setState(() {
+          _questions = loadedQuestions;
+          _isLoading = false;
+          _lauraMessage = "Prête ? C'est parti !";
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _questions = [];
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _checkAnswer(int index) async {
     if (_isAnswered) return;
 
-    // Mise à jour visuelle immédiate
     setState(() {
       _selectedAnswerIndex = index;
       _isAnswered = true;
@@ -64,67 +74,85 @@ class _SessionScreenState extends State<SessionScreen> {
     bool isCorrect = index == _questions[_currentIndex].correctOptionIndex;
 
     if (isCorrect) {
-      // ✅ VICTOIRE
       setState(() {
-        _score += 50;
+        _scoreSession += 50;
         _lauraMessage = "Excellent ! Ton Aura grandit. ✨";
       });
+      // Mise à jour du score global (Provider)
+      ref.read(auraProvider.notifier).addPoints(50);
       Future.delayed(const Duration(milliseconds: 1500), _nextQuestion);
     } else {
-      // ❌ ERREUR -> APPEL IA
-      setState(() {
-        _lauraMessage = "Laura analyse ton erreur...";
-      });
-
-      // Récupération des données pour l'IA
+      setState(() => _lauraMessage = "Laura analyse ton erreur...");
       final question = _questions[_currentIndex];
-      final wrongAnswer = question.options[index];
-      final rightAnswer = question.options[question.correctOptionIndex];
+      String hintToShow = question.hint; 
 
-      // Appel au service (Asynchrone)
-      final hint = await OpenAIService.getHint(
-        question: question.text,
-        userAnswer: wrongAnswer,
-        correctAnswer: rightAnswer,
-        subject: question.subject,
-      );
-
-      // Mise à jour du message si l'écran est toujours là
-      if (mounted) {
-        setState(() {
-          _lauraMessage = hint;
-        });
-      }
-
-      // Délai pour lire l'indice
-      Future.delayed(const Duration(milliseconds: 4000), _nextQuestion);
+      if (mounted) setState(() => _lauraMessage = hintToShow);
+      Future.delayed(const Duration(milliseconds: 3500), _nextQuestion);
     }
   }
 
-  void _nextQuestion() {
+  // 👇 NOUVELLE FONCTION : Sauvegarde l'historique dans le Cloud
+  Future<void> _saveSessionToCloud() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    
+    // On ne sauvegarde que si l'utilisateur est connecté (pas en mode Invité)
+    if (user != null) {
+      try {
+        await Supabase.instance.client.from('study_sessions').insert({
+          'user_id': user.id,
+          'points_earned': _scoreSession,
+          'game_mode': 'Session Rapide',
+          // 'duration_minutes': 1, // On pourra calculer le vrai temps plus tard
+        });
+        print("✅ Session sauvegardée dans l'historique !");
+      } catch (e) {
+        print("⚠️ Erreur sauvegarde historique: $e");
+      }
+    }
+  }
+
+  // Modification de la fin de partie
+  void _nextQuestion() async { // Ajout de async
     if (_currentIndex < _questions.length - 1) {
       setState(() {
         _currentIndex++;
         _selectedAnswerIndex = null;
         _isAnswered = false;
-        _lauraMessage = "Focus. Prochaine question.";
+        _lauraMessage = "Question suivante...";
       });
     } else {
-      // FIN DE SESSION
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ResultScreen(
-            score: _score,
-            totalQuestions: _questions.length,
+      // 🏁 FIN DE SESSION
+      
+      // 1. On sauvegarde l'historique (Fire and forget)
+      _saveSessionToCloud(); 
+
+      // 2. On va vers l'écran de résultat
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResultScreen(
+              score: _scoreSession,
+              totalQuestions: _questions.length,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: AuraColors.electricCyan)));
+    }
+    if (_questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(leading: const BackButton(color: Colors.white), backgroundColor: Colors.transparent),
+        body: const Center(child: Text("Erreur de connexion au Savoir.", style: TextStyle(color: Colors.white))),
+      );
+    }
+
     final currentQuestion = _questions[_currentIndex];
 
     return Scaffold(
@@ -144,7 +172,6 @@ class _SessionScreenState extends State<SessionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Barre de progression
               LinearProgressIndicator(
                 value: (_currentIndex + 1) / _questions.length,
                 backgroundColor: AuraColors.abyssalGrey,
@@ -154,41 +181,40 @@ class _SessionScreenState extends State<SessionScreen> {
               ),
               const SizedBox(height: 40),
 
-              // Laura (Zone de message)
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
-                child: Row(
+                child: Container(
                   key: ValueKey(_lauraMessage),
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AuraColors.mintNeon.withOpacity(0.2),
-                      child: const Icon(Icons.auto_awesome, color: AuraColors.mintNeon, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Text(
-                        _lauraMessage ?? "...",
-                        style: const TextStyle(color: Colors.white70),
-                        textAlign: TextAlign.center,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AuraColors.abyssalGrey,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.auto_awesome, color: AuraColors.mintNeon, size: 20),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          _lauraMessage ?? "...",
+                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              
               const Spacer(),
 
-              // Carte de Question
               FlashcardWidget(
                 subject: currentQuestion.subject,
                 question: currentQuestion.text,
               ),
-
               const Spacer(),
 
-              // Liste des Réponses
               ...List.generate(currentQuestion.options.length, (index) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
@@ -199,7 +225,6 @@ class _SessionScreenState extends State<SessionScreen> {
                   ),
                 );
               }),
-              
               const SizedBox(height: 20),
             ],
           ),
@@ -208,12 +233,7 @@ class _SessionScreenState extends State<SessionScreen> {
     );
   }
 
-  // Design des boutons
-  Widget _buildAnswerButton({
-    required String text,
-    required int index,
-    required int correctIndex,
-  }) {
+  Widget _buildAnswerButton({required String text, required int index, required int correctIndex}) {
     Color borderColor = AuraColors.starlightWhite.withOpacity(0.2);
     Color textColor = AuraColors.starlightWhite;
     Color? backgroundColor;
@@ -231,7 +251,6 @@ class _SessionScreenState extends State<SessionScreen> {
     }
 
     return OutlinedButton(
-      // 👇 ICI : On appelle bien la fonction qui contient l'IA
       onPressed: () => _checkAnswer(index),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -240,10 +259,7 @@ class _SessionScreenState extends State<SessionScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         foregroundColor: textColor,
       ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
-      ),
+      child: Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
     );
   }
 }
