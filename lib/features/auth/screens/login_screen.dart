@@ -255,7 +255,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
-      validator: validator,
+      validator: validator ??
+          (value) {
+        if (value == null || value.isEmpty) {
+          return "Champ obligatoire";
+        }
+        if (isPassword) {
+          if (value.length < 6) return '6 caractères min.';
+          return null;
+        }
+        if (label.toLowerCase().contains('email')) {
+          final emailRegex = RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+          if (!emailRegex.hasMatch(value)) {
+            return "Format email invalide (ex: neo@onlineschool.fr)";
+          }
+        }
+        return null;
+      },
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,

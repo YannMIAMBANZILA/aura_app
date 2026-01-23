@@ -3,15 +3,18 @@ import 'package:aura_app/config/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart'; // Pour formater la date (Ajoute intl dans pubspec si besoin, sinon utilise une version simple)
+import 'package:aura_app/features/dashboard/screens/dashboard_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:aura_app/providers/user_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _profileData;
   List<dynamic> _history = [];
@@ -40,7 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .select()
           .eq('user_id', user.id)
           .order('created_at', ascending: false) // Du plus récent au plus vieux
-          .limit(5);
+          .limit(50);
 
       if (mounted) {
         setState(() {
@@ -94,9 +97,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.logout, color: AuraColors.softCoral),
             onPressed: () async {
               await Supabase.instance.client.auth.signOut();
+              ref.invalidate(userProvider);
               if (mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-                // On pourrait rediriger vers LoginScreen ici
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const DashboardScreen()), // On recharge DashboardScreen
+                  (route) => false,
+                );
               }
             },
           )
