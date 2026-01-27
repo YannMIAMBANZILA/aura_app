@@ -5,6 +5,7 @@ import 'features/dashboard/screens/dashboard_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/screens/login_screen.dart';
+import 'features/splash/screens/splash_screen.dart';
 
 Future<void> main() async {
   // On transforme le main en async pour charger les variables d'environnement
@@ -39,8 +40,8 @@ class AuraApp extends StatelessWidget {
       title: 'Aura',
       debugShowCheckedModeBanner: false,
       theme: AuraTheme.darkTheme,
-      // Logique de redirection :
-      home: session != null ?  const DashboardScreen() : LoginScreen(),
+      // Logique de redirection : gérée par le Splash Screen
+      home: const SplashScreen(),
     );
   }
 }

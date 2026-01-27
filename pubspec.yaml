@@ -37,15 +37,15 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/logo_blue.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#121212"
-  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_background: "#0F172A"
+  adaptive_icon_foreground: "assets/images/logo_test_padded.png"
 
 flutter_native_splash:
-  color: "#121212"
-  image: "assets/images/logo.png"
+  color: "#0F172A"
+  image: "assets/images/logo_blue.png"
   android_12:
-    color: "#121212"
-    image: "assets/images/logo.png"
+    color: "#0F172A"
+    image: "assets/images/logo_test_padded.png"
   web: false

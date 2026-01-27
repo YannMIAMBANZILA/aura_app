@@ -121,7 +121,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               
               const SizedBox(height: 60),
 
-              const AuraOrb(size: 180),
+              const AuraOrb(size: 280),
 
               const SizedBox(height: 60),
 

@@ -34,42 +34,36 @@ class _AuraOrbState extends State<AuraOrb> with SingleTickerProviderStateMixin {
       animation: _controller,
       builder: (context, child) {
         return Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AuraColors.electricCyan,
-                AuraColors.mintNeon,
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              // Création de l'orbe en code pour garantir qu'il occupe toute la surface
+              gradient: RadialGradient(
+                colors: [
+                  AuraColors.electricCyan.withOpacity(0.9), // Coeur lumineux
+                  AuraColors.electricCyan.withOpacity(0.6),
+                  const Color(0xFF0F172A), // Fondu vers le bord (DeepSpaceBlue)
+                ],
+                stops: const [0.3, 0.7, 1.0],
+              ),
+              boxShadow: [
+                // Glow externe qui respire
+                BoxShadow(
+                  color: AuraColors.electricCyan.withOpacity(0.6),
+                  blurRadius: 20 + (30 * _controller.value),
+                  spreadRadius: 2 + (10 * _controller.value),
+                ),
               ],
             ),
-            boxShadow: [
-              // Couche externe (Glow diffus) - Elle respire avec l'animation
-              BoxShadow(
-                color: AuraColors.electricCyan.withOpacity(0.6),
-                blurRadius: 40 + (20 * _controller.value), // Rayon variable
-                spreadRadius: 10 * _controller.value,      // Étale variable
+            padding: const EdgeInsets.all(20), // Un peu de padding pour que le cerveau ne touche pas les bords
+            child: Center(
+              child: Image.asset(
+                'assets/images/brain_shape_dark.png',
+                fit: BoxFit.contain,
               ),
-              // Couche interne (Cœur blanc intense)
-              BoxShadow(
-                color: Colors.white.withOpacity(0.8),
-                blurRadius: 20,
-                spreadRadius: -10,
-              ),
-            ],
-          ),
-          child: Center(
-            // Ici on mettra plus tard le logo cerveau en SVG
-            child: Icon(
-              Icons.auto_awesome, 
-              color: Colors.white, 
-              size: widget.size * 0.4
             ),
-          ),
-        );
+          );
       },
     );
   }
