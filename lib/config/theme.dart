@@ -41,3 +41,12 @@ class AuraTheme {
     );
   }
 }
+
+class AuraTextStyles {
+  static TextStyle subtitle = GoogleFonts.spaceGrotesk(
+    fontSize: 14,
+    fontWeight: FontWeight.bold,
+    color: AuraColors.starlightWhite.withOpacity(0.6),
+    letterSpacing: 2,
+  );
+}

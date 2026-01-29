@@ -8,7 +8,9 @@ import '../../../models/question.dart';
 import '../../../providers/user_provider.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
-  const SessionScreen({super.key});
+  final String subject;
+
+  const SessionScreen({super.key, required this.subject});
 
   @override
   ConsumerState<SessionScreen> createState() => _SessionScreenState();
@@ -35,7 +37,10 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       final response = await Supabase.instance.client
           .from('questions')
           .select()
-          .limit(10); // On en prend 10 pour avoir du choix
+          .eq('grade', '3eme')    //  FILTRE 1 : Que la 3ème
+          .eq('subject', widget.subject) //  FILTRE 2 : Matière choisie
+          // .eq('chapter', 'Géométrie') // (Optionnel) Pour être encore plus précis
+          .limit(10); // On prend 10 questions max
 
       final data = response as List<dynamic>;
       List<Question> loadedQuestions = data.map((json) => Question.fromMap(json)).toList();
