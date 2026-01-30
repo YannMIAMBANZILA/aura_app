@@ -2,10 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/intl.dart'; // Pour formater la date (Ajoute intl dans pubspec si besoin, sinon utilise une version simple)
+import 'package:intl/intl.dart'; 
 import 'package:aura_app/features/dashboard/screens/dashboard_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aura_app/providers/user_provider.dart';
+
+// Provider pour récupérer les badges de l'utilisateur
+final badgesProvider = FutureProvider<List<String>>((ref) async {
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return [];
+
+  try {
+    final response = await Supabase.instance.client
+        .from('badges')
+        .select('badge_type')
+        .eq('user_id', user.id);
+    
+    // On retourne une liste de String (ex: ['Hebdo', 'Mensuel'])
+    return (response as List).map((e) => e['badge_type'] as String).toList();
+  } catch (e) {
+    print("Erreur badges: $e");
+    return [];
+  }
+});
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -141,11 +160,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 _buildStatCard("Total Points", "$score", Icons.auto_awesome),
                 const SizedBox(width: 16),
-                _buildStatCard("Sessions", "${_history.length}", Icons.history), // Juste pour l'exemple (c'est le nombre affiché)
+                _buildStatCard("Sessions", "${_history.length}", Icons.history), 
               ],
             ),
 
             const SizedBox(height: 40),
+            
+            // 2.5 GALERIE DES SCEAUX
+            Align(alignment: Alignment.centerLeft, child: Text("GALERIE DES SCEAUX", style: AuraTextStyles.subtitle)),
+            const SizedBox(height: 16),
+            const BadgeGrid(),
+
+            const SizedBox(height: 40),
+            
             Align(alignment: Alignment.centerLeft, child: Text("DERNIÈRES ACTIVITÉS", style: Theme.of(context).textTheme.bodyMedium)),
             const SizedBox(height: 16),
 
@@ -211,6 +238,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class BadgeGrid extends ConsumerWidget {
+  const BadgeGrid({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final badgesAsync = ref.watch(badgesProvider);
+
+    // Liste des Badges disponibles (Ordre fixe)
+    final allBadges = [
+      {'id': 'Hebdo', 'label': 'Hebdo', 'icon': Icons.verified_user},
+      {'id': 'Mensuel', 'label': 'Mensuel', 'icon': Icons.shield},
+      {'id': 'Trimestriel', 'label': 'Trimestre', 'icon': Icons.workspace_premium},
+      {'id': 'Semestriel', 'label': 'Semestre', 'icon': Icons.military_tech},
+      {'id': 'Annuel', 'label': 'Annuel', 'icon': Icons.star},
+    ];
+
+    return badgesAsync.when(
+      data: (unlockedBadges) {
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.center,
+          children: allBadges.map((badge) {
+            final isUnlocked = unlockedBadges.contains(badge['id']);
+            return _buildBadgeItem(badge, isUnlocked);
+          }).toList(),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: AuraColors.electricCyan)),
+      error: (err, stack) => const Text("Erreur chargement badges", style: TextStyle(color: AuraColors.softCoral)),
+    );
+  }
+
+  Widget _buildBadgeItem(Map<String, dynamic> badge, bool isUnlocked) {
+    final color = isUnlocked ? AuraColors.electricCyan : Colors.white.withOpacity(0.2);
+    final borderColor = isUnlocked ? AuraColors.electricCyan : Colors.white10;
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AuraColors.abyssalGrey,
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: 2),
+            boxShadow: isUnlocked ? [
+              BoxShadow(color: AuraColors.electricCyan.withOpacity(0.5), blurRadius: 10, spreadRadius: 1)
+            ] : [],
+          ),
+          child: Icon(badge['icon'] as IconData, color: color, size: 28),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          badge['label'] as String,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 10, 
+            color: isUnlocked ? Colors.white : Colors.white24,
+            fontWeight: isUnlocked ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
     );
   }
 }
