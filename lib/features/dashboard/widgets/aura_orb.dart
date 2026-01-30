@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart';
+import 'dart:math';
 
 class AuraOrb extends StatefulWidget {
   final double size;
@@ -11,11 +12,16 @@ class AuraOrb extends StatefulWidget {
 
 class _AuraOrbState extends State<AuraOrb> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  // Positions fixes pour les étoiles
+  final List<Point<double>> _stars = List.generate(12, (_) {
+    final r = sqrt(Random().nextDouble()) * 0.7; // Rayon max 0.7
+    final theta = Random().nextDouble() * 2 * pi;
+    return Point(r * cos(theta), r * sin(theta)); 
+  });
 
   @override
   void initState() {
     super.initState();
-    // Animation de "respiration" infinie (2 secondes)
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
@@ -34,37 +40,68 @@ class _AuraOrbState extends State<AuraOrb> with SingleTickerProviderStateMixin {
       animation: _controller,
       builder: (context, child) {
         return Container(
-            width: widget.size,
-            height: widget.size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              // Création de l'orbe en code pour garantir qu'il occupe toute la surface
-              gradient: RadialGradient(
-                colors: [
-                  AuraColors.electricCyan.withOpacity(0.9), // Coeur lumineux
-                  AuraColors.electricCyan.withOpacity(0.6),
-                  const Color(0xFF0F172A), // Fondu vers le bord (DeepSpaceBlue)
-                ],
-                stops: const [0.3, 0.7, 1.0],
-              ),
-              boxShadow: [
-                // Glow externe qui respire
-                BoxShadow(
-                  color: AuraColors.electricCyan.withOpacity(0.6),
-                  blurRadius: 20 + (30 * _controller.value),
-                  spreadRadius: 2 + (10 * _controller.value),
-                ),
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // Le dégradé original de l'orbe "Bioluminescent"
+            gradient: RadialGradient(
+              colors: [
+                AuraColors.electricCyan.withOpacity(0.9), 
+                AuraColors.electricCyan.withOpacity(0.6),
+                AuraColors.deepSpaceBlue, 
               ],
+              stops: const [0.3, 0.7, 1.0],
             ),
-            padding: const EdgeInsets.all(20), // Un peu de padding pour que le cerveau ne touche pas les bords
-            child: Center(
-              child: Image.asset(
-                'assets/images/brain_shape_dark.png',
-                fit: BoxFit.contain,
+            boxShadow: [
+              // Glow externe respirant
+              BoxShadow(
+                color: AuraColors.electricCyan.withOpacity(0.6),
+                blurRadius: 20 + (30 * _controller.value),
+                spreadRadius: 2 + (10 * _controller.value),
               ),
-            ),
-          );
+            ],
+          ),
+          child: CustomPaint(
+            painter: _StarsPainter(_stars, _controller.value),
+          ),
+        );
       },
     );
+  }
+}
+
+class _StarsPainter extends CustomPainter {
+  final List<Point<double>> stars;
+  final double animationValue;
+
+  _StarsPainter(this.stars, this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final paint = Paint()..color = Colors.white;
+
+    for (int i = 0; i < stars.length; i++) {
+      final star = stars[i];
+      // Scintillement des étoiles
+      // On utilise i pour déphaser le scintillement
+      double twinkle = sin((animationValue * 2 * pi) + i); 
+      double opacity = 0.5 + (0.5 * twinkle); 
+      
+      paint.color = Colors.white.withOpacity(opacity.clamp(0.2, 1.0));
+      
+      canvas.drawCircle(
+        Offset(center.dx + (star.x * radius), center.dy + (star.y * radius)),
+        2.0 + (1.0 * animationValue), // Légère variation de taille
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StarsPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
   }
 }

@@ -58,6 +58,64 @@ class AuraScoreNotifier extends StateNotifier<int> {
     }
   }
 
+  Future<void> completeSession() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    final now = DateTime.now();
+    final profile = await Supabase.instance.client
+        .from('profiles')
+        .select('last_study_date, current_streak')
+        .eq('id', user.id)
+        .single();
+
+    final lastDateStr = profile['last_study_date'] as String?;
+    final lastDate = lastDateStr != null ? DateTime.parse(lastDateStr) : null;
+    int streak = profile['current_streak'] as int? ?? 0;
+    int multiplier = 1;
+
+    // 1. Calcul de la régularité
+    if (lastDate == null) {
+      streak = 1;
+    } else {
+      final difference = DateTime(now.year, now.month, now.day)
+          .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
+          .inDays;
+
+      if (difference == 1) {
+        streak++; // Jour consécutif !
+        multiplier = streak; // x4 si 4j, etc.
+      } else if (difference > 1) {
+        streak = 1; // On a raté un jour, on repart à 1
+      } else {
+        multiplier = 1; // Déjà révisé aujourd'hui : gain normal
+      }
+    }
+
+    // 2. Application du gain unique de 50 pts
+    int pointsToGain = 50 * multiplier;
+    state = state + pointsToGain;
+
+    // 3. Update BDD
+    await Supabase.instance.client.from('profiles').update({
+      'aura_points': state,
+      'current_streak': streak,
+      'last_study_date': now.toIso8601String(),
+    }).eq('id', user.id);
+
+    // 4. Update Local
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_storageKey, state);
+
+    // 5. Vérification des Badges (placeholder)
+    _checkAndAwardBadges(streak, user.id);
+  }
+
+  Future<void> _checkAndAwardBadges(int streak, String userId) async {
+    // Logique pour les badges (à implémenter si besoin)
+    print("Vérification des badges pour le streak: $streak");
+  }
+
   Future<void> syncLocalToCloud() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -71,7 +129,7 @@ class AuraScoreNotifier extends StateNotifier<int> {
           .select('aura_points')
           .eq('id', user.id)
           .single();
-      
+
       final cloudScore = data['aura_points'] as int;
 
       if (localScore > cloudScore) {
@@ -95,7 +153,6 @@ final auraProvider = StateNotifierProvider<AuraScoreNotifier, int>((ref) {
   return AuraScoreNotifier();
 });
 
-
 // L'état de l'utilisateur (Identité + Rang)
 class UserState {
   final User? user;
@@ -112,8 +169,7 @@ class UserNotifier extends StateNotifier<UserState> {
   Future<void> refreshUser() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      // Ici on pourrait charger le rang depuis la BDD plus tard
-      state = UserState(user: user, rank: 'Apprenti'); 
+      state = UserState(user: user, rank: 'Apprenti');
     } else {
       state = UserState(user: null);
     }

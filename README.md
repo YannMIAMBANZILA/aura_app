@@ -14,8 +14,9 @@ En fusionnant la **psychologie cognitive**, la **bioluminescence digitale** et l
 
 * **⚛️ Sessions Atomiques :** Des cycles de révision ultra-courts (6 min) pour maximiser la rétention (Micro-learning).
 * **🤖 Laura (AI Coach) :** Une entité bienveillante qui guide, donne des indices socratiques et encourage, sans jamais juger.
-* **💎 Système d'Aura :** Une gamification visuelle et apaisante. Plus l'élève apprend, plus son interface brille et évolue.
+* **💎 Système d'Aura :** Une gamification visuelle et apaisante. Plus l'élève apprend, plus son orbe (généré procéduralement) brille et se complexifie avec des étoiles.
 * **🌑 Dark Mode Natif :** Une interface "Digital Bioluminescence" conçue pour réduire la fatigue oculaire et favoriser le focus nocturne.
+* **📊 Smart Dashboard :** Sélection rapide des matières (Maths, Histoire, etc.) via des puces néon interactives et suivi des Streaks (séries) pour motiver la régularité.
 
 ---
 
@@ -179,7 +180,8 @@ aura_app/
 │   │   └── theme.dart          # Thème Digital Bioluminescence
 │   ├── features/               # Modules fonctionnels
 │   │   ├── auth/
-│   │   ├── home/
+│   │   ├── dashboard/          # Écran principal avec Orbe et Stats
+│   │   ├── splash/             # Écran de lancement
 │   │   └── learning/
 │   ├── models/                 # Modèles de données
 │   ├── providers/              # State management
