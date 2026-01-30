@@ -23,48 +23,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String selectedSubject = 'Maths'; // Matière par défaut
 
   final List<Map<String, dynamic>> subjects = [
-    {'name': 'Maths', 'icon': Icons.calculate},
-    {'name': 'Histoire', 'icon': Icons.history_edu},
-    {'name': 'Anglais', 'icon': Icons.translate},
-    {'name': 'Sciences', 'icon': Icons.science},
+    {'name': 'Maths', 'icon': Icons.calculate, 'color': AuraColors.cyan},
+    {'name': 'Français', 'icon': Icons.menu_book, 'color': AuraColors.purple},
+    {'name': 'Physique', 'icon': Icons.science, 'color': AuraColors.green},
+    {'name': 'Histoire', 'icon': Icons.history_edu, 'color': AuraColors.orange},
+    {'name': 'Anglais', 'icon': Icons.translate, 'color': AuraColors.cyan},
+    {'name': 'Philo', 'icon': Icons.psychology, 'color': AuraColors.purple},
   ];
-
-  // Fonction pour construire une puce néon
-  Widget _buildSubjectChip(String name, IconData icon) {
-    bool isSelected = selectedSubject == name;
-    return GestureDetector(
-      onTap: () => setState(() => selectedSubject = name),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? AuraColors.electricCyan.withOpacity(0.2) : Colors.transparent,
-          border: Border.all(
-            color: isSelected ? AuraColors.electricCyan : Colors.white24,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: isSelected
-              ? [BoxShadow(color: AuraColors.electricCyan.withOpacity(0.5), blurRadius: 10)]
-              : [],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: isSelected ? AuraColors.electricCyan : Colors.white60, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              name,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white60,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -92,6 +57,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         // En cas d'erreur silencieuse
       }
     }
+  }
+
+  // Widget avec l'effet de Halo
+  Widget _buildSubjectChip(Map<String, dynamic> subject) {
+    bool isSelected = selectedSubject == subject['name'];
+    Color color = subject['color'];
+
+    return GestureDetector(
+      onTap: () => setState(() => selectedSubject = subject['name']),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.white12,
+            width: 2,
+          ),
+          // L'EFFET DE HALO (GLOW)
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.4),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  ),
+                  BoxShadow(
+                    color: color.withOpacity(0.2),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              subject['icon'],
+              color: isSelected ? color : Colors.white38,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              subject['name'],
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white38,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -166,7 +187,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                 const SizedBox(height: 32),
 
-                const AuraOrb(size: 240), // Réduit de 280 à 240
+                const AuraOrb(size: 240), 
 
                 const SizedBox(height: 32),
 
@@ -179,7 +200,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(height: 8),
 
                 Text(
-                  "6 minutes pour faire la différence.",
+                  "1 minute pour faire la différence.",
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
 
@@ -191,7 +212,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   alignment: WrapAlignment.center,
-                  children: subjects.map((s) => _buildSubjectChip(s['name'], s['icon'])).toList(),
+                  children: subjects.map((s) => _buildSubjectChip(s)).toList(),
                 ),
 
                 const SizedBox(height: 40),

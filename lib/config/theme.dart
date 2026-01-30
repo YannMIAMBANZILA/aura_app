@@ -9,6 +9,12 @@ class AuraColors {
   static const Color mintNeon = Color(0xFF4ADE80);      // Succès
   static const Color softCoral = Color(0xFFF87171);     // Erreur / Alert
   static const Color starlightWhite = Color(0xFFF1F5F9); // Texte
+
+  static const Color background = Color(0xFF0A0E14); // Noir profond
+  static const Color cyan = Color(0xFF00FBFF);       // Cyan Électrique
+  static const Color purple = Color(0xFFBC00FF);     // Violet Néon
+  static const Color green = Color(0xFF39FF14);      // Vert Acide
+  static const Color orange = Color(0xFFFFAC00);     // Orange Sunset
 }
 
 class AuraTheme {
