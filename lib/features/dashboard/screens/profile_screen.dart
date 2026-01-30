@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart'; 
 import 'package:aura_app/features/dashboard/screens/dashboard_screen.dart';
+import 'package:aura_app/features/dashboard/screens/session_review_screen.dart';
+import 'package:aura_app/features/dashboard/widgets/stats_charts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aura_app/providers/user_provider.dart';
 
@@ -121,27 +123,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 1. AVATAR & RANG
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: rankColor.withOpacity(0.2),
-              child: Text(
-                username.substring(0, 1).toUpperCase(),
-                style: GoogleFonts.spaceGrotesk(fontSize: 40, fontWeight: FontWeight.bold, color: rankColor),
+            Center(
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: rankColor.withOpacity(0.2),
+                child: Text(
+                  username.substring(0, 1).toUpperCase(),
+                  style: GoogleFonts.spaceGrotesk(fontSize: 40, fontWeight: FontWeight.bold, color: rankColor),
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            Text(username, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+            Center(child: Text(username, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white))),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: rankColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: rankColor),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: rankColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: rankColor),
+                ),
+                child: Text(rankTitle.toUpperCase(), style: TextStyle(color: rankColor, fontWeight: FontWeight.bold, letterSpacing: 2)),
               ),
-              child: Text(rankTitle.toUpperCase(), style: TextStyle(color: rankColor, fontWeight: FontWeight.bold, letterSpacing: 2)),
             ),
 
             const SizedBox(height: 40),
@@ -158,13 +165,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 40),
             
             // 2.5 GALERIE DES SCEAUX
-            Align(alignment: Alignment.centerLeft, child: Text("GALERIE DES SCEAUX", style: AuraTextStyles.subtitle)),
+            Center(child: Text("GALERIE DES SCEAUX", style: AuraTextStyles.subtitle, textAlign: TextAlign.center)),
             const SizedBox(height: 16),
             const BadgeGrid(),
 
             const SizedBox(height: 40),
             
-            Align(alignment: Alignment.centerLeft, child: Text("DERNIÈRES ACTIVITÉS", style: Theme.of(context).textTheme.bodyMedium)),
+            // 2.7 STATISTIQUES AVANCÉES
+            const StatsSection(),
+            
+            const SizedBox(height: 40),
+            
+            Center(child: Text("DERNIÈRES ACTIVITÉS", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center)),
             const SizedBox(height: 16),
 
             // 3. HISTORIQUE
@@ -181,27 +193,56 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AuraColors.abyssalGrey,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white10),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      final answers = session['answers_json'];
+                      if (answers != null && answers is List && answers.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SessionReviewScreen(
+                              answers: answers,
+                              dateStr: dateStr,
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Détails non disponibles pour cette session.")),
+                        );
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(session['game_mode'] ?? "Entraînement", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          Text(dateStr, style: const TextStyle(color: Colors.white30, fontSize: 12)),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(session['game_mode'] ?? "Entraînement", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              Text(dateStr, style: const TextStyle(color: Colors.white30, fontSize: 12)),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                "+${session['points_earned']}",
+                                style: const TextStyle(color: AuraColors.mintNeon, fontWeight: FontWeight.bold, fontSize: 18),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 12),
+                            ],
+                          ),
                         ],
                       ),
-                      Text(
-                        "+${session['points_earned']}",
-                        style: const TextStyle(color: AuraColors.mintNeon, fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                    ],
+                    ),
                   ),
                 );
               }),

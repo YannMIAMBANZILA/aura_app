@@ -69,6 +69,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     }
   }
 
+  List<Map<String, dynamic>> _sessionAnswers = []; // Pour stocker les détails
+
   Future<void> _checkAnswer(int index) async {
     if (_isAnswered) return;
 
@@ -77,19 +79,26 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       _isAnswered = true;
     });
 
-    bool isCorrect = index == _questions[_currentIndex].correctOptionIndex;
+    final currentQ = _questions[_currentIndex];
+    bool isCorrect = index == currentQ.correctOptionIndex;
+
+    // Enregistrement de la réponse
+    _sessionAnswers.add({
+      'question_text': currentQ.text,
+      'user_answer': currentQ.options[index],
+      'correct_answer': currentQ.options[currentQ.correctOptionIndex],
+      'is_correct': isCorrect,
+      'explanation': currentQ.hint, // On garde l'explication (hint) pour la review
+    });
 
     if (isCorrect) {
       setState(() {
         _lauraMessage = "Excellent ! Ton Aura grandit. ✨";
       });
-      // OPTIONNEL : On pourrait ajouter des points par question ici, 
-      // mais le nouveau système ne recompense que la fin de session (Streak).
       Future.delayed(const Duration(milliseconds: 1500), _nextQuestion);
     } else {
       setState(() => _lauraMessage = "Laura analyse ton erreur...");
-      final question = _questions[_currentIndex];
-      String hintToShow = question.hint; 
+      String hintToShow = currentQ.hint; 
 
       if (mounted) setState(() => _lauraMessage = hintToShow);
       Future.delayed(const Duration(milliseconds: 3500), _nextQuestion);
@@ -106,7 +115,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
           'user_id': user.id,
           'points_earned': pointsEarned,
           'game_mode': 'Session Rapide',
-          // 'duration_minutes': 1, // On pourra calculer le vrai temps plus tard
+          'answers_json': _sessionAnswers, // Sauvegarde du JSON
         });
         print("✅ Session sauvegardée dans l'historique !");
       } catch (e) {
@@ -133,7 +142,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       final int streak = result['streak'];
       
       // 2. On sauvegarde l'historique avec le vrai montant gagné
-      _saveSessionToCloud(earnedPoints); 
+      await _saveSessionToCloud(earnedPoints); 
 
       // 3. Récupérer le score total à jour pour affichage
       final int endingScore = ref.read(auraProvider);

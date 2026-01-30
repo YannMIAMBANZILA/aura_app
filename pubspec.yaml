@@ -18,6 +18,7 @@ dependencies:
   intl: ^0.20.2
   confetti: ^0.8.0
   flutter_native_splash: ^2.3.1 
+  fl_chart: ^1.1.1
 
 dev_dependencies:
   flutter_test:
