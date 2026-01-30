@@ -58,9 +58,9 @@ class AuraScoreNotifier extends StateNotifier<int> {
     }
   }
 
-  Future<void> completeSession() async {
+  Future<Map<String, dynamic>> completeSession() async {
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
+    if (user == null) return {'points': 0, 'streak': 0};
 
     final now = DateTime.now();
     final profile = await Supabase.instance.client
@@ -77,6 +77,7 @@ class AuraScoreNotifier extends StateNotifier<int> {
     // 1. Calcul de la régularité
     if (lastDate == null) {
       streak = 1;
+      multiplier = 1;
     } else {
       final difference = DateTime(now.year, now.month, now.day)
           .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
@@ -84,15 +85,18 @@ class AuraScoreNotifier extends StateNotifier<int> {
 
       if (difference == 1) {
         streak++; // Jour consécutif !
-        multiplier = streak; // x4 si 4j, etc.
+        multiplier = streak; // Multiplicateur = Streak
       } else if (difference > 1) {
-        streak = 1; // On a raté un jour, on repart à 1
+        streak = 1; // On a raté un jour
+        multiplier = 1;
       } else {
-        multiplier = 1; // Déjà révisé aujourd'hui : gain normal
+        // Déjà révisé aujourd'hui
+        streak = streak; // On garde le streak
+        multiplier = streak; // On garde le multiplicateur actuel
       }
     }
 
-    // 2. Application du gain unique de 50 pts
+    // 2. Calcul du gain : 50pts x Streak
     int pointsToGain = 50 * multiplier;
     state = state + pointsToGain;
 
@@ -109,6 +113,8 @@ class AuraScoreNotifier extends StateNotifier<int> {
 
     // 5. Vérification des Badges (placeholder)
     _checkAndAwardBadges(streak, user.id);
+    
+    return {'points': pointsToGain, 'streak': streak};
   }
 
   Future<void> _checkAndAwardBadges(int streak, String userId) async {

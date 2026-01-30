@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:aura_app/config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../screens/result_sreen.dart';
+import '../screens/result_screen.dart';
 import '../../learning/widgets/flashcard_widget.dart';
 import '../../../models/question.dart';
 import '../../../providers/user_provider.dart';
@@ -20,7 +20,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   List<Question> _questions = [];
   bool _isLoading = true;
   int _currentIndex = 0;
-  int _scoreSession = 0;
+  // _scoreSession ne sert plus qu'à l'affichage local si besoin, mais le vrai calcul est à la fin
+  // int _scoreSession = 0; 
   int? _selectedAnswerIndex;
   bool _isAnswered = false;
   String? _lauraMessage;
@@ -80,11 +81,10 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
 
     if (isCorrect) {
       setState(() {
-        _scoreSession += 50;
         _lauraMessage = "Excellent ! Ton Aura grandit. ✨";
       });
-      // Mise à jour du score global (Provider)
-      ref.read(auraProvider.notifier).addPoints(50);
+      // OPTIONNEL : On pourrait ajouter des points par question ici, 
+      // mais le nouveau système ne recompense que la fin de session (Streak).
       Future.delayed(const Duration(milliseconds: 1500), _nextQuestion);
     } else {
       setState(() => _lauraMessage = "Laura analyse ton erreur...");
@@ -96,16 +96,15 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     }
   }
 
-  // 👇 NOUVELLE FONCTION : Sauvegarde l'historique dans le Cloud
-  Future<void> _saveSessionToCloud() async {
+  // 👇 Sauvegarde l'historique dans le Cloud
+  Future<void> _saveSessionToCloud(int pointsEarned) async {
     final user = Supabase.instance.client.auth.currentUser;
-    
     // On ne sauvegarde que si l'utilisateur est connecté (pas en mode Invité)
     if (user != null) {
       try {
         await Supabase.instance.client.from('study_sessions').insert({
           'user_id': user.id,
-          'points_earned': _scoreSession,
+          'points_earned': pointsEarned,
           'game_mode': 'Session Rapide',
           // 'duration_minutes': 1, // On pourra calculer le vrai temps plus tard
         });
@@ -117,7 +116,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   // Modification de la fin de partie
-  void _nextQuestion() async { // Ajout de async
+  void _nextQuestion() async { 
     if (_currentIndex < _questions.length - 1) {
       setState(() {
         _currentIndex++;
@@ -128,17 +127,26 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     } else {
       // 🏁 FIN DE SESSION
       
-      // 1. On sauvegarde l'historique (Fire and forget)
-      _saveSessionToCloud(); 
+      // 1. Calcul des gains via le Provider (Streak System)
+      final result = await ref.read(auraProvider.notifier).completeSession();
+      final int earnedPoints = result['points'];
+      final int streak = result['streak'];
+      
+      // 2. On sauvegarde l'historique avec le vrai montant gagné
+      _saveSessionToCloud(earnedPoints); 
 
-      // 2. On va vers l'écran de résultat
+      // 3. Récupérer le score total à jour pour affichage
+      final int endingScore = ref.read(auraProvider);
+
+      // 4. On va vers l'écran de résultat
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => ResultScreen(
-              score: _scoreSession,
-              totalQuestions: _questions.length,
+              earnedPoints: earnedPoints,
+              streak: streak,
+              endingScore: endingScore,
             ),
           ),
         );
