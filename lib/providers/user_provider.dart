@@ -153,12 +153,18 @@ final auraProvider = StateNotifierProvider<AuraScoreNotifier, int>((ref) {
   return AuraScoreNotifier();
 });
 
-// L'état de l'utilisateur (Identité + Rang)
+// L'état de l'utilisateur (Identité)
 class UserState {
   final User? user;
-  final String rank;
 
-  UserState({this.user, this.rank = 'Apprenti'});
+  UserState({this.user});
+
+  // Fonction calculée pour le titre
+  String getTitle(int points) {
+    if (points < 1000) return 'Aura Éveil';
+    if (points < 100000) return 'Aura Farmer';
+    return 'Aura INFINIE';
+  }
 }
 
 // La logique de l'utilisateur
@@ -169,7 +175,7 @@ class UserNotifier extends StateNotifier<UserState> {
   Future<void> refreshUser() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      state = UserState(user: user, rank: 'Apprenti');
+      state = UserState(user: user);
     } else {
       state = UserState(user: null);
     }

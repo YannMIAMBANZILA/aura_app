@@ -77,21 +77,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  // Petit algorythme de Gamification 🎮
-  String _getRank(int score) {
-    if (score < 500) return "Novice";
-    if (score < 1500) return "Apprenti";
-    if (score < 3000) return "Initié";
-    if (score < 5000) return "Maître";
-    return "Légende Aura";
-  }
-
   Color _getRankColor(int score) {
-    if (score < 500) return Colors.white54;
-    if (score < 1500) return AuraColors.mintNeon;
-    if (score < 3000) return AuraColors.electricCyan;
-    if (score < 5000) return Colors.amber;
-    return Colors.purpleAccent;
+    if (score < 1000) return Colors.white54;
+    if (score < 100000) return AuraColors.electricCyan;
+    return AuraColors.purple; // Aura INFINIE
   }
 
   @override
@@ -102,7 +91,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     final int score = _profileData?['aura_points'] ?? 0;
     final String username = _profileData?['username'] ?? "Voyageur";
-    final String rank = _getRank(score);
+    
+    // Utilisation dynamique du UserState pour le titre
+    final String rankTitle = ref.read(userProvider).getTitle(score);
     final Color rankColor = _getRankColor(score);
 
     return Scaffold(
@@ -150,7 +141,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: rankColor),
               ),
-              child: Text(rank.toUpperCase(), style: TextStyle(color: rankColor, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              child: Text(rankTitle.toUpperCase(), style: TextStyle(color: rankColor, fontWeight: FontWeight.bold, letterSpacing: 2)),
             ),
 
             const SizedBox(height: 40),
