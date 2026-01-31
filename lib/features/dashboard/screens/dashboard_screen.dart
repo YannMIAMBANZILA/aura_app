@@ -8,6 +8,8 @@ import '../../learning/screens/session_screen.dart';
 import '../../../providers/user_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import 'profile_screen.dart';
+import '../../../services/notification_service.dart';
+
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -44,7 +46,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       try {
         final data = await Supabase.instance.client
             .from('profiles')
-            .select('username')
+            .select('username, last_study_date')
             .eq('id', user.id)
             .single();
 
@@ -53,8 +55,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             _username = data['username'];
           });
         }
+        
+        // Vérification de la notification quotidienne
+        bool hasStudiedToday = false;
+        if (data['last_study_date'] != null) {
+           final lastDate = DateTime.parse(data['last_study_date']).toLocal();
+           final now = DateTime.now();
+           if (lastDate.year == now.year && lastDate.month == now.month && lastDate.day == now.day) {
+             hasStudiedToday = true;
+           }
+        }
+        // Programme le rappel quotidien
+        await NotificationService().scheduleDailyReminder(hasStudiedToday);
+
+
       } catch (e) {
         // En cas d'erreur silencieuse
+        print("Erreur checkUser: $e");
       }
     }
   }

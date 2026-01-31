@@ -6,6 +6,7 @@ import '../screens/result_screen.dart';
 import '../../learning/widgets/flashcard_widget.dart';
 import '../../../models/question.dart';
 import '../../../providers/user_provider.dart';
+import '../../../services/notification_service.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
   final String subject;
@@ -83,12 +84,13 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     bool isCorrect = index == currentQ.correctOptionIndex;
 
     // Enregistrement de la réponse
+    // Enregistrement de la réponse au format détaillé
     _sessionAnswers.add({
-      'question_text': currentQ.text,
-      'user_answer': currentQ.options[index],
-      'correct_answer': currentQ.options[currentQ.correctOptionIndex],
-      'is_correct': isCorrect,
-      'explanation': currentQ.hint, // On garde l'explication (hint) pour la review
+      'question': currentQ.text,
+      'options': currentQ.options,
+      'correct_answer_index': currentQ.correctOptionIndex,
+      'selected_answer_index': index,
+      'explanation': currentQ.hint,
     });
 
     if (isCorrect) {
@@ -136,18 +138,23 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     } else {
       // 🏁 FIN DE SESSION
       
-      // 1. Calcul des gains via le Provider (Streak System)
+      // 1. Calcul des gains
       final result = await ref.read(auraProvider.notifier).completeSession();
-      final int earnedPoints = result['points'];
-      final int streak = result['streak'];
       
-      // 2. On sauvegarde l'historique avec le vrai montant gagné
-      await _saveSessionToCloud(earnedPoints); 
+      // On ajoute " ?? 0 " pour dire "si c'est null, mets 0"
+      final int earnedPoints = result['points'] ?? 0;
+      final int streak = result['streak'] ?? 1;
+      
+      // 2. On sauvegarde
+      await _saveSessionToCloud(earnedPoints);
 
-      // 3. Récupérer le score total à jour pour affichage
+      // 2.2 Programme le rappel
+      await NotificationService().scheduleDailyReminder(true); 
+
+      // 3. Récupérer le score
       final int endingScore = ref.read(auraProvider);
 
-      // 4. On va vers l'écran de résultat
+      // 4. Navigation vers ResultScreen
       if (mounted) {
         Navigator.pushReplacement(
           context,

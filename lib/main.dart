@@ -6,26 +6,32 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
-  // On transforme le main en async pour charger les variables d'environnement
-  await dotenv.load(fileName: ".env");
-  // On englobe l'app avec ProviderScope pour activer Riverpod
-  runApp(const ProviderScope(child: AuraApp()));
+  WidgetsFlutterBinding.ensureInitialized();
 
- // Initialisation de Supabase
- try {
-  await dotenv.load(fileName: ".env");
+  // Initialisation des notifications
+  await NotificationService().init();
+  print("Notifications initialisées !");
+  
+  try {
+    // 1. Charger les env vars
+    await dotenv.load(fileName: ".env");
 
-  await Supabase.initialize(
-  url: dotenv.env['SUPABASE_URL']!,
-  anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
- );
- // Vérification de la connexion
- print("✅ Connecté à Supabase avec succès !");
-} catch (error) {
-  print("⚠️ Erreur de connexion : $error");
+    // 2. Initialiser Supabase
+    await Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL']!,
+      anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    );
+    print("Connecté à Supabase avec succès !");
+
+  } catch (error) {
+    print("Erreur d'initialisation : $error");
   }
+
+  // 3. Lancer l'app avec Riverpod
+  runApp(const ProviderScope(child: AuraApp()));
 }
 
 

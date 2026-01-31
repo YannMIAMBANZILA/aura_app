@@ -5,6 +5,8 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../providers/user_provider.dart';
+import '../../../services/notification_service.dart';
+
 
 class ResultScreen extends ConsumerStatefulWidget {
   final int earnedPoints;
@@ -38,7 +40,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
     });
   }
 
-  void _checkRankUp() {
+  Future<void> _checkRankUp() async {
     final oldScore = widget.endingScore - widget.earnedPoints;
     final userState = ref.read(userProvider); // UserState pour util methode
     
@@ -53,6 +55,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       setState(() {
         _rankUpMessage = "Ton Aura a transcendé ! Tu es désormais $newTitle";
       });
+      await NotificationService().showRankUpNotification(newTitle);
     }
   }
 
