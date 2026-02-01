@@ -201,27 +201,21 @@
     },
     {
       "name": "flutter_local_notifications",
-      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_local_notifications-20.0.0",
+      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_local_notifications-17.2.4",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "2.17"
     },
     {
       "name": "flutter_local_notifications_linux",
-      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_local_notifications_linux-7.0.0",
+      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_local_notifications_linux-4.0.1",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "2.17"
     },
     {
       "name": "flutter_local_notifications_platform_interface",
-      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_local_notifications_platform_interface-10.0.0",
+      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_local_notifications_platform_interface-7.2.0",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
-    },
-    {
-      "name": "flutter_local_notifications_windows",
-      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_local_notifications_windows-2.0.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "2.17"
     },
     {
       "name": "flutter_native_splash",
@@ -609,7 +603,7 @@
     },
     {
       "name": "timezone",
-      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/timezone-0.10.1",
+      "rootUri": "file:///C:/Users/ymiam/AppData/Local/Pub/Cache/hosted/pub.dev/timezone-0.9.4",
       "packageUri": "lib/",
       "languageVersion": "2.19"
     },

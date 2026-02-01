@@ -19,18 +19,16 @@ class NotificationService {
       android: androidSettings,
     );
 
-    // CORRECTION V18 : Argument nommé 'initializationSettings' OBLIGATOIRE
-    await _notifications.initialize(
-      initializationSettings: settings, 
-    );
+    // VERSION 17 : Argument positionnel (pas de nom 'initializationSettings')
+    await _notifications.initialize(settings);
   }
 
   Future<void> scheduleDailyReminder(bool hasStudiedToday) async {
     const int reminderId = 100;
 
     if (hasStudiedToday) {
-      // CORRECTION V18 : Argument nommé 'id' OBLIGATOIRE
-      await _notifications.cancel(id: reminderId);
+      // VERSION 17 : Argument positionnel
+      await _notifications.cancel(reminderId);
       return;
     }
 
@@ -41,13 +39,13 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
-    // CORRECTION V18 : TOUS les arguments sont nommés ici
+    // VERSION 17 : Arguments mélangés (positionnels au début, nommés à la fin)
     await _notifications.zonedSchedule(
-      id: reminderId,
-      title: 'Ton Aura s\'assombrit...',
-      body: 'N\'oublie pas ta session pour maintenir ton niveau !',
-      scheduledDate: scheduledDate,
-      notificationDetails: const NotificationDetails(
+      reminderId,                                      // id (positionnel)
+      'Ton Aura s\'assombrit...',                      // title (positionnel)
+      'N\'oublie pas ta session pour maintenir ton niveau !', // body (positionnel)
+      scheduledDate,                                   // date (positionnel)
+      const NotificationDetails(                       // details (positionnel)
         android: AndroidNotificationDetails(
           'aura_reminders', 
           'Rappels Aura',
@@ -55,18 +53,19 @@ class NotificationService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // Nommé
+      uiLocalNotificationDateInterpretation: 
+          UILocalNotificationDateInterpretation.absoluteTime, // Nommé
     );
   }
 
   Future<void> showRankUpNotification(String newTitle) async {
-    // CORRECTION V18 : TOUS les arguments sont nommés ici aussi
+    // VERSION 17 : Arguments positionnels
     await _notifications.show(
-      id: 200,
-      title: 'Félicitations !',
-      body: 'Tu es désormais : $newTitle !',
-      notificationDetails: const NotificationDetails(
+      200, // id
+      'Félicitations !', // titre
+      'Tu es désormais : $newTitle !', // corps
+      const NotificationDetails( // details
         android: AndroidNotificationDetails(
           'aura_rank', 
           'Succès Aura',
