@@ -12,12 +12,14 @@ class ResultScreen extends ConsumerStatefulWidget {
   final int earnedPoints;
   final int streak;
   final int endingScore; // Score total APRES la session
+  final String? earnedBadge; // Nouveau badge gagné
 
   const ResultScreen({
     super.key,
     required this.earnedPoints,
     required this.streak,
     required this.endingScore,
+    this.earnedBadge,
   });
 
   @override
@@ -164,7 +166,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                       duration: const Duration(milliseconds: 800),
                       child: Container(
                         padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.only(bottom: 20),
+                        margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
                           color: AuraColors.electricCyan.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
@@ -178,6 +180,34 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                               child: Text(
                                 _rankUpMessage!,
                                 style: const TextStyle(color: AuraColors.electricCyan, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // 4.1 MESSAGE BADGE (Si Badge gagné)
+                  if (widget.earnedBadge != null)
+                    AnimatedOpacity(
+                      opacity: 1.0,
+                      duration: const Duration(milliseconds: 800),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: AuraColors.mintNeon.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AuraColors.mintNeon.withOpacity(0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.workspace_premium, color: AuraColors.mintNeon),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                "Nouveau Sceau débloqué : ${widget.earnedBadge} !",
+                                style: const TextStyle(color: AuraColors.mintNeon, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],

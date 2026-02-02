@@ -9,24 +9,6 @@ import 'package:aura_app/features/dashboard/widgets/stats_charts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aura_app/providers/user_provider.dart';
 
-// Provider pour récupérer les badges de l'utilisateur
-final badgesProvider = FutureProvider<List<String>>((ref) async {
-  final user = Supabase.instance.client.auth.currentUser;
-  if (user == null) return [];
-
-  try {
-    final response = await Supabase.instance.client
-        .from('badges')
-        .select('badge_type')
-        .eq('user_id', user.id);
-    
-    // On retourne une liste de String (ex: ['Hebdo', 'Mensuel'])
-    return (response as List).map((e) => e['badge_type'] as String).toList();
-  } catch (e) {
-    print("Erreur badges: $e");
-    return [];
-  }
-});
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -281,24 +263,27 @@ class BadgeGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final badgesAsync = ref.watch(badgesProvider);
 
-    // Liste des Badges disponibles (Ordre fixe)
+    // Liste des Badges disponibles (Ordre fixe conforme à la nouvelle logique)
     final allBadges = [
-      {'id': 'Hebdo', 'label': 'Hebdo', 'icon': Icons.verified_user},
-      {'id': 'Mensuel', 'label': 'Mensuel', 'icon': Icons.shield},
-      {'id': 'Trimestriel', 'label': 'Trimestre', 'icon': Icons.workspace_premium},
-      {'id': 'Semestriel', 'label': 'Semestre', 'icon': Icons.military_tech},
-      {'id': 'Annuel', 'label': 'Annuel', 'icon': Icons.star},
+      {'id': 'streak_7', 'label': 'Hebdo', 'icon': Icons.verified_user},
+      {'id': 'streak_30', 'label': 'Mensuel', 'icon': Icons.shield},
+      {'id': 'streak_90', 'label': 'Trimestre', 'icon': Icons.workspace_premium},
+      {'id': 'streak_365', 'label': 'Solaire', 'icon': Icons.star},
     ];
 
     return badgesAsync.when(
-      data: (unlockedBadges) {
+      data: (badgeCounts) {
+        if (badgeCounts.isEmpty) {
+          // Log pour debug si besoin
+          print("Aucun badge trouvé pour l'utilisateur.");
+        }
         return Wrap(
           spacing: 12,
           runSpacing: 12,
           alignment: WrapAlignment.center,
           children: allBadges.map((badge) {
-            final isUnlocked = unlockedBadges.contains(badge['id']);
-            return _buildBadgeItem(badge, isUnlocked);
+            final count = badgeCounts[badge['id']] ?? 0;
+            return _buildBadgeItem(badge, count);
           }).toList(),
         );
       },
@@ -307,24 +292,54 @@ class BadgeGrid extends ConsumerWidget {
     );
   }
 
-  Widget _buildBadgeItem(Map<String, dynamic> badge, bool isUnlocked) {
+  Widget _buildBadgeItem(Map<String, dynamic> badge, int count) {
+    final bool isUnlocked = count > 0;
     final color = isUnlocked ? AuraColors.electricCyan : Colors.white.withOpacity(0.2);
     final borderColor = isUnlocked ? AuraColors.electricCyan : Colors.white10;
     
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AuraColors.abyssalGrey,
-            shape: BoxShape.circle,
-            border: Border.all(color: borderColor, width: 2),
-            boxShadow: isUnlocked ? [
-              BoxShadow(color: AuraColors.electricCyan.withOpacity(0.5), blurRadius: 10, spreadRadius: 1)
-            ] : [],
-          ),
-          child: Icon(badge['icon'] as IconData, color: color, size: 28),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AuraColors.abyssalGrey,
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 2),
+                boxShadow: isUnlocked ? [
+                  BoxShadow(color: AuraColors.electricCyan.withOpacity(0.4), blurRadius: 10, spreadRadius: 1)
+                ] : [],
+              ),
+              child: Icon(badge['icon'] as IconData, color: color, size: 28),
+            ),
+            // Pastille de quantité (Badge Chip)
+            if (count >= 1)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    color: AuraColors.electricCyan,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      "x$count",
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(

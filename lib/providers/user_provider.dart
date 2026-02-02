@@ -6,7 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // 1. GESTION DU SCORE
 // ==========================================================
 class AuraScoreNotifier extends StateNotifier<int> {
-  AuraScoreNotifier() : super(0) { _initScore(); }
+  final Ref ref;
+  AuraScoreNotifier(this.ref) : super(0) { _initScore(); }
   static const _storageKey = 'aura_score';
 
   Future<void> _initScore() async {
@@ -66,7 +67,7 @@ class AuraScoreNotifier extends StateNotifier<int> {
   }
 
   // La fonction pour la fin de session (Calcul Streak)
-  Future<Map<String, int>> completeSession() async {
+  Future<Map<String, dynamic>> completeSession() async {
     final user = Supabase.instance.client.auth.currentUser;
     
     // Logique simplifiée de streak (tu pourras la complexifier avec la BDD plus tard)
@@ -92,12 +93,67 @@ class AuraScoreNotifier extends StateNotifier<int> {
         } catch(e) { print(e); }
     }
 
-    return {'points': earnedPoints, 'streak': streak};
+    // Vérification et déblocage des badges
+    final String? badgeEarned = await _checkAndUnlockBadges(streak);
+    
+    // On force le rafraîchissement des badges pour qu'ils s'affichent dans le profil
+    ref.invalidate(badgesProvider);
+
+    return {
+      'points': earnedPoints, 
+      'streak': streak,
+      'badge': badgeEarned,
+    };
+  }
+
+  Future<String?> _checkAndUnlockBadges(int streak) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return null;
+
+    String? lastBadge;
+
+    // Tous les 7 jours -> Sceau Hebdo
+    if (streak % 7 == 0) {
+      await Supabase.instance.client.from('user_badges').insert({
+        'user_id': user.id,
+        'badge_id': 'streak_7',
+      });
+      lastBadge = "Sceau Hebdo";
+    }
+
+    // Tous les 30 jours -> Sceau Mensuel
+    if (streak % 30 == 0) {
+      await Supabase.instance.client.from('user_badges').insert({
+        'user_id': user.id,
+        'badge_id': 'streak_30',
+      });
+      lastBadge = "Sceau Mensuel";
+    }
+
+    // Tous les 90 jours -> Sceau Trimestriel
+    if (streak % 90 == 0) {
+      await Supabase.instance.client.from('user_badges').insert({
+        'user_id': user.id,
+        'badge_id': 'streak_90',
+      });
+      lastBadge = "Sceau Trimestriel";
+    }
+
+    // Tous les 365 jours -> Sceau Solaire
+    if (streak % 365 == 0) {
+      await Supabase.instance.client.from('user_badges').insert({
+        'user_id': user.id,
+        'badge_id': 'streak_365',
+      });
+      lastBadge = "Sceau Solaire";
+    }
+
+    return lastBadge;
   }
 }
 
 final auraProvider = StateNotifierProvider<AuraScoreNotifier, int>((ref) {
-  return AuraScoreNotifier();
+  return AuraScoreNotifier(ref);
 });
 
 // ==========================================================
@@ -130,4 +186,30 @@ class UserNotifier extends StateNotifier<UserState> {
 
 final userProvider = StateNotifierProvider<UserNotifier, UserState>((ref) {
   return UserNotifier();
+});
+
+// Provider pour récupérer les badges de l'utilisateur avec leur quantité
+final badgesProvider = FutureProvider<Map<String, int>>((ref) async {
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return {};
+
+  try {
+    // On récupère TOUS les badges de l'utilisateur
+    final data = await Supabase.instance.client
+        .from('user_badges')
+        .select('badge_id')
+        .eq('user_id', user.id);
+    
+    final Map<String, int> badgeCounts = {};
+
+    for (var item in (data as List)) {
+      final id = item['badge_id'] as String;
+      badgeCounts[id] = (badgeCounts[id] ?? 0) + 1;
+    }
+
+    return badgeCounts;
+  } catch (e) {
+    print("Erreur badges provider: $e");
+    return {};
+  }
 });

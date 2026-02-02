@@ -141,9 +141,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       // 1. Calcul des gains
       final result = await ref.read(auraProvider.notifier).completeSession();
       
-      // On ajoute " ?? 0 " pour dire "si c'est null, mets 0"
       final int earnedPoints = result['points'] ?? 0;
       final int streak = result['streak'] ?? 1;
+      final String? badge = result['badge'];
       
       // 2. On sauvegarde
       await _saveSessionToCloud(earnedPoints);
@@ -163,6 +163,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               earnedPoints: earnedPoints,
               streak: streak,
               endingScore: endingScore,
+              earnedBadge: badge,
             ),
           ),
         );
