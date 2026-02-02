@@ -90,8 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.logout, color: AuraColors.softCoral),
             onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              ref.invalidate(userProvider);
+              await ref.read(auraProvider.notifier).logout();
               if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const DashboardScreen()), // On recharge DashboardScreen

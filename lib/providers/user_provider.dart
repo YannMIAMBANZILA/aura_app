@@ -69,35 +69,60 @@ class AuraScoreNotifier extends StateNotifier<int> {
   // La fonction pour la fin de session (Calcul Streak)
   Future<Map<String, dynamic>> completeSession() async {
     final user = Supabase.instance.client.auth.currentUser;
-    
-    // Logique simplifiée de streak (tu pourras la complexifier avec la BDD plus tard)
     final prefs = await SharedPreferences.getInstance();
-    int streak = (prefs.getInt('current_streak') ?? 0) + 1;
-    await prefs.setInt('current_streak', streak);
-
-    // Calcul du gain
-    int earnedPoints = 50 * streak; 
     
-    // Mise à jour état local
+    int streak = prefs.getInt('current_streak') ?? 0;
+    String? lastDateStr = prefs.getString('last_study_date');
+    DateTime now = DateTime.now();
+    
+    bool isFirstSessionToday = true;
+
+    if (lastDateStr != null) {
+      final lastDate = DateTime.parse(lastDateStr).toLocal();
+      if (lastDate.year == now.year && 
+          lastDate.month == now.month && 
+          lastDate.day == now.day) {
+        isFirstSessionToday = false;
+      }
+    }
+
+    int earnedPoints;
+    String? badgeEarned;
+
+    if (isFirstSessionToday) {
+      // SCÉNARIO A : Nouvelle journée
+      streak++;
+      earnedPoints = 50 * streak;
+      
+      // On met à jour les préférences immédiatement
+      await prefs.setInt('current_streak', streak);
+      await prefs.setString('last_study_date', now.toIso8601String());
+      
+      // Vérification et déblocage des badges (Uniquement lors d'un nouveau jour de streak)
+      badgeEarned = await _checkAndUnlockBadges(streak);
+      
+      // On force le rafraîchissement des badges
+      ref.invalidate(badgesProvider);
+    } else {
+      // SCÉNARIO B : Déjà joué aujourd'hui
+      earnedPoints = 50; 
+      badgeEarned = null;
+    }
+    
+    // Mise à jour état local (Points)
     state += earnedPoints;
     await prefs.setInt(_storageKey, state);
 
-    // Sauvegarde Cloud
+    // Sauvegarde Cloud (On écrase toujours avec la dernière date et le streak actuel)
     if (user != null) {
         try {
             await Supabase.instance.client.from('profiles').update({
                 'aura_points': state,
                 'current_streak': streak,
-                'last_study_date': DateTime.now().toIso8601String(),
+                'last_study_date': now.toIso8601String(),
             }).eq('id', user.id);
-        } catch(e) { print(e); }
+        } catch(e) { print("Erreur Cloud Update: $e"); }
     }
-
-    // Vérification et déblocage des badges
-    final String? badgeEarned = await _checkAndUnlockBadges(streak);
-    
-    // On force le rafraîchissement des badges pour qu'ils s'affichent dans le profil
-    ref.invalidate(badgesProvider);
 
     return {
       'points': earnedPoints, 
@@ -149,6 +174,20 @@ class AuraScoreNotifier extends StateNotifier<int> {
     }
 
     return lastBadge;
+  }
+  
+  Future<void> logout() async {
+    // 1. Vider le state local (Riverpod)
+    state = 0; 
+    
+    // 2. Vider le cache local
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('aura_score');
+    await prefs.remove('current_streak');
+    await prefs.remove('last_study_date');
+    
+    // 3. Déconnexion Supabase
+    await Supabase.instance.client.auth.signOut();
   }
 }
 
@@ -212,4 +251,5 @@ final badgesProvider = FutureProvider<Map<String, int>>((ref) async {
     print("Erreur badges provider: $e");
     return {};
   }
+  
 });
