@@ -13,7 +13,7 @@ class NotificationService {
     tz_data.initializeTimeZones();
     
     const AndroidInitializationSettings androidSettings = 
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
     
     const InitializationSettings settings = InitializationSettings(
       android: androidSettings,
@@ -34,6 +34,7 @@ class NotificationService {
 
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, 18);
+    // var scheduledDate = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 10)); // pour tester le rappel
 
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
