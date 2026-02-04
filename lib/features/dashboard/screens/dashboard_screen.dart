@@ -149,7 +149,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const SizedBox(width: 40), // Pour équilibrer
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ChatScreen()),
+                        );
+                      },
+                      child: const CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AuraColors.electricCyan,
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundImage: AssetImage('assets/images/laura_avatar.png'),
+                        ),
+                      ),
+                    ),
 
                     // TITRE DYNAMIQUE
                     Column(
@@ -271,16 +286,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AuraColors.electricCyan,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ChatScreen()),
-          );
-        },
-        child: const Icon(Icons.auto_awesome, color: Colors.black),
-      ),
+
     );
   }
 }

@@ -11,28 +11,46 @@ class ChatService {
     _model = GenerativeModel(
       model: 'gemini-1.5-flash',
       apiKey: apiKey,
-      systemInstruction: Content.system(
-        "Tu es Laura, une coach scolaire bienveillante, cool et motivante pour un élève de 3ème. "
-        "Tu tutoies, tu utilises des emojis, tu es pédagogue mais concise. "
-        "Tu ne donnes pas juste la réponse, tu expliques la méthode pour que l'élève comprenne."
-      ),
     );
   }
 
+  final String _lauraPersona = 
+    "CONTEXTE : Tu es Laura, une coach scolaire bienveillante, cool et motivante pour un élève de 3ème. "
+    "Tu tutoies, tu utilises des emojis, tu es pédagogue mais concise. "
+    "Tu ne donnes pas juste la réponse, tu expliques la méthode pour que l'élève comprenne.\n\n";
+
   Future<String> getLauraResponse(String prompt, {Uint8List? imageBytes}) async {
     try {
-      final content = [
-        Content.multi([
-          TextPart(prompt),
-          if (imageBytes != null) DataPart('image/jpeg', imageBytes),
-        ])
-      ];
+      final fullPrompt = _lauraPersona + prompt;
+      GenerateContentResponse response;
+      
+      if (imageBytes != null) {
+        // Envoi Multi-modal (Image + Texte)
+        final content = [
+          Content.multi([
+            TextPart(fullPrompt),
+            DataPart('image/jpeg', imageBytes),
+          ])
+        ];
+        response = await _model.generateContent(content);
+      } else {
+        // Envoi Texte uniquement
+        response = await _model.generateContent([Content.text(fullPrompt)]);
+      }
 
-      final response = await _model.generateContent(content);
-      return response.text ?? "Oups, j'ai eu un petit bug de connexion au savoir. Réessaie ?";
+      final text = response.text;
+      if (text == null || text.isEmpty) {
+        return "Je n'ai pas pu générer de réponse. Peut-être que le sujet est sensible ? 😕";
+      }
+      
+      return text;
     } catch (e) {
-      print("Erreur Gemini: $e");
-      return "Désolée, je n'arrive pas à réfléchir correctement là... Vérifie ta connexion !";
+      print("❌ ERREUR GEMINI : $e");
+      // Retourne l'erreur simplifiée pour aider au debug
+      if (e.toString().contains("Invalid API key")) {
+        return "Erreur : Ta clé API Gemini est invalide. Vérifie ton fichier .env !";
+      }
+      return "Désolée, je bugge un peu... Vérifie ta connexion ou ma clé API ! (Erreur: ${e.toString().split(':').last})";
     }
   }
 }

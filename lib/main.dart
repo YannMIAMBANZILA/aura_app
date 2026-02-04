@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // <--- Indispensable
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/theme.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
