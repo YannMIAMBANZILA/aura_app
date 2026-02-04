@@ -9,6 +9,7 @@ import '../../../providers/user_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import 'profile_screen.dart';
 import '../../../services/notification_service.dart';
+import '../../chat/screens/chat_screen.dart';
 
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -269,6 +270,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AuraColors.electricCyan,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatScreen()),
+          );
+        },
+        child: const Icon(Icons.auto_awesome, color: Colors.black),
       ),
     );
   }
