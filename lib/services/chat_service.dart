@@ -9,7 +9,7 @@ class ChatService {
   ChatService() {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-flash-latest',
       apiKey: apiKey,
     );
   }
@@ -46,11 +46,16 @@ class ChatService {
       return text;
     } catch (e) {
       print("❌ ERREUR GEMINI : $e");
-      // Retourne l'erreur simplifiée pour aider au debug
+      
       if (e.toString().contains("Invalid API key")) {
         return "Erreur : Ta clé API Gemini est invalide. Vérifie ton fichier .env !";
       }
-      return "Désolée, je bugge un peu... Vérifie ta connexion ou ma clé API ! (Erreur: ${e.toString().split(':').last})";
+      
+      if (e.toString().contains("not found")) {
+        return "Erreur : Le modèle Gemini n'est pas trouvé. J'ai essayé de passer à 'gemini-1.5-flash-latest'. Si l'erreur persiste, vérifie que ton compte a bien accès à ce modèle dans Google AI Studio.";
+      }
+
+      return "Désolée, je bugge un peu... Vérifie ta connexion ou ma clé API ! (Détails: ${e.toString().split(':').last.trim()})";
     }
   }
 }

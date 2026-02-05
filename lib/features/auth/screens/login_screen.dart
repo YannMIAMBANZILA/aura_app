@@ -255,6 +255,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
+      
       validator: validator ??
           (value) {
         if (value == null || value.isEmpty) {
