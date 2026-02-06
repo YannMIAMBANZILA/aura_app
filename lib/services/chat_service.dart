@@ -5,57 +5,73 @@ import 'dart:typed_data';
 
 class ChatService {
   late final GenerativeModel _model;
+  ChatSession? _chat;
   
   ChatService() {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash-lite', 
       apiKey: apiKey,
+      systemInstruction: Content.system(
+        "You are Laura, a kind, cool, and motivating school coach for a secondary school student. "
+        "Use a friendly tone, include emojis, and be pedagogical yet concise. "
+        "Don't just provide the answer; explain the method so the student understands."
+      ),
     );
+    _chat = _model.startChat();
   }
 
-  final String _lauraPersona = 
-    "CONTEXTE : Tu es Laura, une coach scolaire bienveillante, cool et motivante pour un élève de 3ème. "
-    "Tu tutoies, tu utilises des emojis, tu es pédagogue mais concise. "
-    "Tu ne donnes pas juste la réponse, tu expliques la méthode pour que l'élève comprenne.\n\n";
-
   Future<String> getLauraResponse(String prompt, {Uint8List? imageBytes}) async {
-    try {
-      final fullPrompt = _lauraPersona + prompt;
-      GenerateContentResponse response;
-      
-      if (imageBytes != null) {
-        // Envoi Multi-modal (Image + Texte)
-        final content = [
-          Content.multi([
-            TextPart(fullPrompt),
-            DataPart('image/jpeg', imageBytes),
-          ])
-        ];
-        response = await _model.generateContent(content);
-      } else {
-        // Envoi Texte uniquement
-        response = await _model.generateContent([Content.text(fullPrompt)]);
-      }
+    int retryCount = 0;
+    const maxRetries = 2;
 
-      final text = response.text;
-      if (text == null || text.isEmpty) {
-        return "Je n'ai pas pu générer de réponse. Peut-être que le sujet est sensible ? 😕";
-      }
-      
-      return text;
-    } catch (e) {
-      print("❌ ERREUR GEMINI : $e");
-      
-      if (e.toString().contains("Invalid API key")) {
-        return "Erreur : Ta clé API Gemini est invalide. Vérifie ton fichier .env !";
-      }
-      
-      if (e.toString().contains("not found")) {
-        return "Erreur : Le modèle Gemini n'est pas trouvé. J'ai essayé de passer à 'gemini-1.5-flash-latest'. Si l'erreur persiste, vérifie que ton compte a bien accès à ce modèle dans Google AI Studio.";
-      }
+    while (retryCount <= maxRetries) {
+      try {
+        GenerateContentResponse response;
+        
+        if (imageBytes != null) {
+          final content = [
+            Content.multi([
+              TextPart(prompt),
+              DataPart('image/jpeg', imageBytes),
+            ])
+          ];
+          response = await _model.generateContent(content);
+        } else {
+          response = await _chat!.sendMessage(Content.text(prompt));
+        }
 
-      return "Désolée, je bugge un peu... Vérifie ta connexion ou ma clé API ! (Détails: ${e.toString().split(':').last.trim()})";
+        final text = response.text;
+        if (text == null || text.isEmpty) {
+          return "I couldn't generate a response. Maybe the topic is sensitive? 😕";
+        }
+        
+        return text;
+      } catch (e) {
+        final errorStr = e.toString();
+        print("❌ ERREUR GEMINI (Essai ${retryCount + 1}): $e");
+
+        if (errorStr.contains("429") || errorStr.contains("Quota exceeded") || errorStr.contains("Please retry in")) {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            await Future.delayed(const Duration(seconds: 2));
+            continue;
+          }
+          return "⏳ Whoops, I'm thinking too fast! Give me a 30-second break to catch my breath (Quota exceeded).";
+        }
+        
+        if (errorStr.contains("Invalid API key")) {
+          return "Error: Your Gemini API key is invalid. Check your .env file!";
+        }
+        
+        if (errorStr.contains("not found")) {
+          return "Error: Gemini model not found. Check if the API is enabled in Google AI Studio.";
+        }
+
+        final errorDetail = errorStr.contains(':') ? errorStr.split(':').last.trim() : errorStr;
+        return "Sorry, I'm glitching a bit... Check your connection or my API key! (Details: $errorDetail)";
+      }
     }
+    return "Sorry, I'm a bit slow today. Please try again in a moment!";
   }
 }

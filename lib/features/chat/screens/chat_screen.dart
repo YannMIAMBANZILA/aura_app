@@ -24,11 +24,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Uint8List? _selectedImage;
 
   final List<String> _suggestions = [
-    "Explique-moi le théorème de Thalès",
-    "Corrige mon texte d'anglais",
-    "Quiz rapide sur la 2nde Guerre Mondiale",
-    "Astuce pour mémoriser les dates",
-    "Aide-moi pour un DM de physique",
+    "Explain Thales' theorem to me",
+    "Correct my English text",
+    "Quick quiz on World War II",
+    "Tips for memorizing dates",
+    "Help me with a physics assignment",
   ];
 
   @override
@@ -38,7 +38,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _initTts() async {
-    await _flutterTts.setLanguage("fr-FR");
+    await _flutterTts.setLanguage("en-US");
     await _flutterTts.setPitch(1.1);
   }
 
@@ -102,7 +102,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("LAURA", style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, letterSpacing: 2)),
-                const Text("Ton Coach IA", style: TextStyle(fontSize: 10, color: AuraColors.mintNeon)),
+                const Text("Your AI Coach", style: TextStyle(fontSize: 10, color: AuraColors.mintNeon)),
               ],
             ),
           ],
@@ -138,7 +138,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: AuraColors.electricCyan),
                   ),
                   SizedBox(width: 12),
-                  Text("Laura réfléchit...", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text("Laura is thinking...", style: TextStyle(color: Colors.white54, fontSize: 12)),
                 ],
               ),
             ),
@@ -211,7 +211,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   controller: _controller,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: "Pose ta question à Laura...",
+                    hintText: "Ask Laura anything...",
                     hintStyle: const TextStyle(color: Colors.white24),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.05),
