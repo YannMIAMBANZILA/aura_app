@@ -7,13 +7,13 @@ class ChatService {
   late final GenerativeModel _model;
   ChatSession? _chat;
   
-  ChatService() {
+  ChatService({String? systemInstruction}) {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     _model = GenerativeModel(
       model: 'gemini-2.0-flash-lite', 
       apiKey: apiKey,
       systemInstruction: Content.system(
-        "You are Laura, a kind, cool, and motivating school coach for a secondary school student. "
+        systemInstruction ?? "You are Laura, a kind, cool, and motivating school coach for a secondary school student. "
         "Use a friendly tone, include emojis, and be pedagogical yet concise. "
         "Don't just provide the answer; explain the method so the student understands."
       ),

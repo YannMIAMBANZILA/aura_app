@@ -10,6 +10,7 @@ import '../../auth/screens/login_screen.dart';
 import 'profile_screen.dart';
 import '../../../services/notification_service.dart';
 import '../../chat/screens/chat_screen.dart';
+import '../../learning/screens/lesson_selection_screen.dart';
 
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -250,35 +251,71 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                 const SizedBox(height: 40),
 
-                // BOUTON LANCER
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AuraColors.electricCyan.withOpacity(0.1),
-                      shadowColor: AuraColors.electricCyan,
-                      elevation: 10,
-                      side: const BorderSide(color: AuraColors.electricCyan, width: 2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SessionScreen(subject: selectedSubject),
+                // BOUTONS D'ACTION
+                Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AuraColors.electricCyan.withOpacity(0.1),
+                          shadowColor: AuraColors.electricCyan,
+                          elevation: 10,
+                          side: const BorderSide(color: AuraColors.electricCyan, width: 2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         ),
-                      );
-                    },
-                    child: Text(
-                      "LANCER UNE SESSION",
-                      style: GoogleFonts.spaceGrotesk(
-                        color: AuraColors.electricCyan,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SessionScreen(subject: selectedSubject),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          "S'ENTRAÎNER (QUIZ)",
+                          style: GoogleFonts.spaceGrotesk(
+                            color: AuraColors.electricCyan,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AuraColors.mintNeon, width: 2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          backgroundColor: AuraColors.mintNeon.withOpacity(0.05),
+                        ),
+                        onPressed: () {
+                          final subjectColor = subjects.firstWhere((s) => s['name'] == selectedSubject)['color'];
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LessonSelectionScreen(
+                                subject: selectedSubject,
+                                subjectColor: subjectColor,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          "APPRENDRE UN COURS",
+                          style: GoogleFonts.spaceGrotesk(
+                            color: AuraColors.mintNeon,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
               ],
