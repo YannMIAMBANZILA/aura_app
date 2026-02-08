@@ -34,6 +34,9 @@ class _LessonChatScreenState extends ConsumerState<LessonChatScreen> {
   void initState() {
     super.initState();
     _initTts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(lessonProvider((subject: widget.subject, chapter: widget.chapter)).notifier).startQuizSession();
+    });
   }
 
   void _initTts() async {
@@ -150,13 +153,13 @@ class _LessonChatScreenState extends ConsumerState<LessonChatScreen> {
                 ],
               ),
             ),
-          _buildInputArea(),
+          _buildInputArea(lessonState),
         ],
       ),
     );
   }
 
-  Widget _buildInputArea() {
+  Widget _buildInputArea(LessonState lessonState) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -185,6 +188,29 @@ class _LessonChatScreenState extends ConsumerState<LessonChatScreen> {
                   icon: const Icon(Icons.close, color: Colors.white),
                   onPressed: () => setState(() => _selectedImage = null),
                 ),
+              ),
+            ),
+          if (lessonState.lessonContent != null)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [1, 2, 3, 4].map((i) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    label: Text("Réponse $i"),
+                    labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                    backgroundColor: Colors.white.withOpacity(0.05),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: const BorderSide(color: Colors.white10),
+                    ),
+                    onPressed: () {
+                      _controller.text = i.toString();
+                      _handleSend();
+                    },
+                  ),
+                )).toList(),
               ),
             ),
           Row(

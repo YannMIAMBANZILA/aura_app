@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/chat_message.dart';
@@ -73,5 +74,51 @@ class ChatService {
       }
     }
     return "Sorry, I'm a bit slow today. Please try again in a moment!";
+  }
+  Future<Map<String, dynamic>> generateLessonContent(String subject, String chapter) async {
+    final prompt = """
+      Generate a deep-dive lesson on the subject '$subject' and the chapter '$chapter'.
+      Return ONLY a JSON object with the following structure:
+      {
+        "description": "Brief description of the lesson",
+        "full_summary": [
+          {"title": "Part 1 title", "content": "Detailed content for part 1"},
+          {"title": "Part 2 title", "content": "Detailed content for part 2"}
+        ],
+        "example": "A concrete example or application of the lesson content",
+        "pro_point_career": "A career where this knowledge is useful",
+        "pro_point_application": "How it is applied in that career",
+        "key_points": ["Key point 1", "Key point 2", "Key point 3"],
+        "quiz_questions": [
+          {
+            "question": "A question to test understanding",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "correct_index": 0,
+            "explanation": "Why this answer is correct"
+          }
+        ]
+      }
+      Ensure the tone is pedagogical, friendly (like a coach named Laura), and use emojis. Use French for the content.
+    """;
+
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-2.0-flash-lite',
+        apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
+        generationConfig: GenerationConfig(responseMimeType: 'application/json'),
+      );
+      
+      final response = await model.generateContent([Content.text(prompt)]);
+      final text = response.text;
+      
+      if (text == null || text.isEmpty) {
+        throw Exception("Empty response from AI");
+      }
+      
+      return jsonDecode(text);
+    } catch (e) {
+      print("❌ Error generating lesson: $e");
+      rethrow;
+    }
   }
 }

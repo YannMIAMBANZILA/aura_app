@@ -3,6 +3,7 @@ import 'package:aura_app/config/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../chat/screens/chat_screen.dart';
 import 'lesson_chat_screen.dart';
+import 'lesson_carousel_screen.dart';
 
 class LessonSelectionScreen extends StatefulWidget {
   final String subject;
@@ -82,7 +83,7 @@ class _LessonSelectionScreenState extends State<LessonSelectionScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => LessonChatScreen(
+            builder: (_) => LessonCarouselScreen(
               subject: widget.subject,
               chapter: chapterName,
             ),
