@@ -7,6 +7,7 @@ import '../../learning/widgets/flashcard_widget.dart';
 import '../../../models/question.dart';
 import '../../../providers/user_provider.dart';
 import '../../../services/notification_service.dart';
+import '../../dashboard/widgets/stats_charts.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
   final String subject;
@@ -115,10 +116,15 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       try {
         await Supabase.instance.client.from('study_sessions').insert({
           'user_id': user.id,
+          'subject': widget.subject,
           'points_earned': pointsEarned,
           'game_mode': 'Session Rapide',
-          'answers_json': _sessionAnswers, // Sauvegarde du JSON
+          'answers_json': _sessionAnswers, 
         });
+        
+        // Rafraîchir les stats
+        ref.invalidate(statsProvider);
+        
         print("✅ Session sauvegardée dans l'historique !");
       } catch (e) {
         print("⚠️ Erreur sauvegarde historique: $e");

@@ -22,7 +22,10 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
   Map<String, int> distribution = {
     'Maths': 0,
     'Français': 0,
+    'Physique': 0,
     'Histoire': 0,
+    'Anglais': 0,
+    'Philo': 0,
   };
 
   if (user == null) {
@@ -30,22 +33,27 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
   }
 
   try {
+    // On récupère tout (*) pour être sûr de ne pas crasher si une colonne spécifique manque au début
     final response = await Supabase.instance.client
         .from('study_sessions')
-        .select('created_at, subject')
+        .select()
         .eq('user_id', user.id); 
 
     final List<dynamic> data = response as List<dynamic>;
 
     for (var session in data) {
-      final date = DateTime.parse(session['created_at']).toLocal();
-      if (date.weekday >= 1 && date.weekday <= 7) {
-         activity[date.weekday] = (activity[date.weekday] ?? 0) + 1;
+      if (session['created_at'] != null) {
+        final date = DateTime.parse(session['created_at']).toLocal();
+        if (date.weekday >= 1 && date.weekday <= 7) {
+           activity[date.weekday] = (activity[date.weekday] ?? 0) + 1;
+        }
       }
 
-      String rawSubject = session['subject'] ?? 'Général';
-      // Normalize subject name if you want (e.g. capitalized)
-      String subject = rawSubject.isEmpty ? 'Général' : rawSubject;
+      // Gestion robuste du sujet
+      String? subject = session['subject'] as String?;
+      if (subject == null || subject.isEmpty) {
+        subject = 'Général';
+      }
       
       distribution[subject] = (distribution[subject] ?? 0) + 1;
     }
@@ -53,7 +61,6 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
     return AuraStats(weeklyActivity: activity, subjectDistribution: distribution);
   } catch (e) {
     print("Erreur Stats: $e");
-    // Return safe default on error
     return AuraStats(weeklyActivity: activity, subjectDistribution: distribution);
   }
 });
