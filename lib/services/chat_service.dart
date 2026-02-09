@@ -121,4 +121,25 @@ class ChatService {
       rethrow;
     }
   }
+
+  Future<String> generateRevisionCard(String subject, String chapter, List<String> keyPoints) async {
+    final prompt = """
+      Crée une fiche de révision structurée en Markdown pour le cours suivant :
+      Sujet: $subject
+      Chapitre: $chapter
+      Points clés identifiés : ${keyPoints.join(', ')}
+
+      La fiche doit être claire, visuelle (utilise du gras, des listes, des emojis) et pédagogique. 
+      Inclus une introduction, les concepts fondamentaux détaillés, et une conclusion "Le mot de Laura".
+      Réponds UNIQUEMENT avec le contenu de la fiche en Markdown. Pas de blabla autour.
+    """;
+
+    try {
+      final response = await _model.generateContent([Content.text(prompt)]);
+      return response.text ?? "Erreur lors de la génération de la fiche.";
+    } catch (e) {
+      print("❌ Error generating revision card: $e");
+      return "Une erreur est survenue lors de la création de ta fiche. Tu peux quand même la rédiger toi-même !";
+    }
+  }
 }

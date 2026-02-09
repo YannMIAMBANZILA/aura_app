@@ -8,6 +8,7 @@ import 'package:aura_app/features/dashboard/screens/session_review_screen.dart';
 import 'package:aura_app/features/dashboard/widgets/stats_charts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aura_app/providers/user_provider.dart';
+import 'package:aura_app/features/learning/screens/revision_card_list_screen.dart';
 
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -156,6 +157,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const StatsSection(),
             
             const SizedBox(height: 40),
+
+            // 2.9 MES FICHES
+            _buildActionTile(
+              context,
+              "Mes Fiches",
+              "Gère tes fiches de révision PDF",
+              Icons.sticky_note_2_outlined,
+              AuraColors.mintNeon,
+              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RevisionCardListScreen())),
+            ),
+            
+            const SizedBox(height: 40),
             
             Center(child: Text("DERNIÈRES ACTIVITÉS", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center)),
             const SizedBox(height: 16),
@@ -250,6 +263,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Text(label, style: const TextStyle(color: Colors.white30, fontSize: 12)),
           ],
         ),
+      ),
+    );
+  }
+  Widget _buildActionTile(BuildContext context, String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AuraColors.abyssalGrey,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white30, fontSize: 12)),
+        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 16),
       ),
     );
   }

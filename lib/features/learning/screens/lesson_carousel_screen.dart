@@ -6,6 +6,8 @@ import '../../../models/lesson_content.dart';
 import '../providers/lesson_provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'lesson_chat_screen.dart';
+import 'revision_card_edit_screen.dart';
+import '../../../services/chat_service.dart';
 
 class LessonCarouselScreen extends ConsumerStatefulWidget {
   final String subject;
@@ -137,6 +139,7 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
       _buildProPage(content.proPointCareer, content.proPointApplication),
       _buildKeyPointsPage(content.keyPoints),
       _buildQuizIntroPage(),
+      _buildRevisionCardPage(content.keyPoints),
     ];
 
     return PageView.builder(
@@ -349,6 +352,85 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
             },
             child: Text(
               "COMMENCER LA SESSION",
+              style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildRevisionCardPage(List<String> keyPoints) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AuraColors.mintNeon.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AuraColors.mintNeon.withOpacity(0.5), width: 2),
+      ),
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.sticky_note_2_outlined, color: AuraColors.mintNeon, size: 80),
+          const SizedBox(height: 32),
+          Text(
+            "Génère ta fiche de révision !",
+            style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Laura peut créer une fiche personnalisée basée sur tes points clés. Tu pourras l'éditer, l'exporter en PDF et la retrouver dans ton profil.",
+            style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AuraColors.mintNeon,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+            onPressed: () async {
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator(color: AuraColors.mintNeon)),
+              );
+
+              try {
+                final chatService = ChatService();
+                final content = await chatService.generateRevisionCard(
+                  widget.subject,
+                  widget.chapter,
+                  keyPoints,
+                );
+                
+                if (mounted) {
+                  Navigator.pop(context); // Close loading
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RevisionCardEditScreen(
+                        subject: widget.subject,
+                        chapter: widget.chapter,
+                        initialContent: content,
+                      ),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Oups, impossible de générer la fiche pour le moment. 😕")),
+                  );
+                }
+              }
+            },
+            child: Text(
+              "CRÉER MA FICHE MAGIQUE",
               style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
             ),
           ),
