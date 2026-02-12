@@ -11,7 +11,7 @@ class ChatService {
   ChatService({String? systemInstruction}) {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     _model = GenerativeModel(
-      model: 'gemini-2.0-flash-lite', 
+      model: 'gemini-1.5-flash', 
       apiKey: apiKey,
       systemInstruction: Content.system(
         systemInstruction ?? "You are Laura, a kind, cool, and motivating school coach for a secondary school student. "
@@ -103,7 +103,7 @@ class ChatService {
 
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.0-flash-lite',
+        model: 'gemini-1.5-flash',
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
         generationConfig: GenerationConfig(responseMimeType: 'application/json'),
       );
