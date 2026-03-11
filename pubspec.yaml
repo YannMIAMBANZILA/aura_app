@@ -21,7 +21,7 @@ dependencies:
   fl_chart: ^1.1.1
   flutter_local_notifications: ^17.0.0
   timezone: ^0.9.2
-  google_generative_ai: ^0.4.7
+  google_generative_ai: any
   flutter_markdown: ^0.7.7+1
   image_picker: ^1.2.1
   flutter_tts: ^4.2.5

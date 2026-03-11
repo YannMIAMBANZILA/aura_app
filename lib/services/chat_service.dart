@@ -11,7 +11,7 @@ class ChatService {
   ChatService({String? systemInstruction}) {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash', 
+      model: 'gemini-2.5-flash', 
       apiKey: apiKey,
       systemInstruction: Content.system(
         systemInstruction ?? "You are Laura, a kind, cool, and motivating school coach for a secondary school student. "
@@ -77,50 +77,92 @@ class ChatService {
   }
   Future<Map<String, dynamic>> generateLessonContent(String subject, String chapter) async {
     final prompt = """
-      Generate a deep-dive lesson on the subject '$subject' and the chapter '$chapter'.
-      Return ONLY a JSON object with the following structure:
+      Génère un cours complet et approfondi sur le sujet '$subject' et le chapitre '$chapter'.
+      Format attendu : JSON uniquement.
+      
+      Structure du JSON :
       {
-        "description": "Brief description of the lesson",
+        "description": "Brève description du cours (2-3 phrases)",
         "full_summary": [
-          {"title": "Part 1 title", "content": "Detailed content for part 1"},
-          {"title": "Part 2 title", "content": "Detailed content for part 2"}
+          {"title": "Titre partie 1", "content": "Contenu détaillé partie 1 (Markdown supporté)"},
+          {"title": "Titre partie 2", "content": "Contenu détaillé partie 2 (Markdown supporté)"}
         ],
-        "example": "A concrete example or application of the lesson content",
-        "pro_point_career": "A career where this knowledge is useful",
-        "pro_point_application": "How it is applied in that career",
-        "key_points": ["Key point 1", "Key point 2", "Key point 3"],
+        "example": "Un exemple concret ou une application pratique",
+        "pro_point_career": "Un métier réel où ces connaissances sont utiles",
+        "pro_point_application": "Comment c'est utilisé concrètement dans ce métier",
+        "key_points": ["Point clé 1", "Point clé 2", "Point clé 3"],
         "quiz_questions": [
           {
-            "question": "A question to test understanding",
-            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "question": "Une question pour tester la compréhension",
+            "options": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
             "correct_index": 0,
-            "explanation": "Why this answer is correct"
+            "explanation": "Explication pédagogique de la bonne réponse"
           }
         ]
       }
-      Ensure the tone is pedagogical, friendly (like a coach named Laura), and use emojis. Use French for the content.
+      
+      Le ton doit être pédagogique, encourageant (tu es Laura, une coach scolaire) et utiliser des emojis.
+      IMPORTANT : Réponds UNIQUEMENT avec le JSON brut. Pas de texte avant ou après.
     """;
 
-    try {
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
-        generationConfig: GenerationConfig(responseMimeType: 'application/json'),
-      );
-      
-      final response = await model.generateContent([Content.text(prompt)]);
-      final text = response.text;
-      
-      if (text == null || text.isEmpty) {
-        throw Exception("Empty response from AI");
+    int retryCount = 0;
+    const maxRetries = 2;
+
+    while (retryCount <= maxRetries) {
+      try {
+        final model = GenerativeModel(
+          model: 'gemini-2.5-flash', 
+          apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
+          // On retire responseMimeType car certains environnements/clés API bloquent sur v1beta
+          // generationConfig: GenerationConfig(responseMimeType: 'application/json'),
+        );
+        
+        final response = await model.generateContent([
+          Content.text(prompt)
+        ], safetySettings: [
+          SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
+          SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
+          SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
+          SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
+        ]);
+
+        var text = response.text;
+        
+        if (text == null || text.isEmpty) {
+          throw Exception("Réponse vide de l'IA (peut-être bloquée par les filtres)");
+        }
+        
+        // Nettoyage robuste du JSON (extraction du premier bloc { ... })
+        final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+        if (jsonMatch != null) {
+          text = jsonMatch.group(0)!;
+        }
+
+        return jsonDecode(text);
+      } catch (e) {
+        final errorStr = e.toString();
+        print("❌ Error generating lesson (Trial ${retryCount + 1}): $e");
+
+        if (errorStr.contains("429") || errorStr.contains("quota")) {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            await Future.delayed(const Duration(seconds: 3));
+            continue;
+          }
+        }
+        
+        // Si le modèle n'est pas trouvé, on tente un fallback sur gemini-2.5-pro ou on prévient
+        if (errorStr.contains("not found")) {
+           print("💡 Essai d'un modèle alternatif suite à 'not found'...");
+           // On pourrait tenter de changer le nom ici pour le prochain essai
+        }
+
+        rethrow;
       }
-      
-      return jsonDecode(text);
-    } catch (e) {
-      print("❌ Error generating lesson: $e");
-      rethrow;
     }
+    throw Exception("Échec après plusieurs tentatives.");
   }
+
 
   Future<String> generateRevisionCard(String subject, String chapter, List<String> keyPoints) async {
     final prompt = """
