@@ -38,12 +38,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _initTts() async {
-    await _flutterTts.setLanguage("en-US");
-    await _flutterTts.setPitch(1.1);
+    await _flutterTts.setLanguage("fr-FR");
+    
+    // RÉGLAGES POUR UNE VOIX PLUS JOVIALE ET DYNAMIQUE
+    // Un pitch > 1.0 rend la voix un peu plus aigüe (plus jeune/souriante)
+    await _flutterTts.setPitch(1.2); 
+    
+    // Une vitesse légèrement ajustée (0.5 est souvent la base, 0.55 donne de l'énergie)
+    await _flutterTts.setSpeechRate(0.5); 
   }
 
   void _speak(String text) async {
-    await _flutterTts.speak(text);
+    // NETTOYAGE DU TEXTE AVANT LA LECTURE
+   // 1. Suppression des caractères Markdown (*, #, _, ~, `)
+    String cleanText = text.replaceAll(RegExp(r'[*#_~`]'), '');
+    
+    // 2. Suppression des emojis
+    // Cette expression régulière magique cible tous les caractères qui ressemblent à un emoji
+    cleanText = cleanText.replaceAll(RegExp(r'[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]', unicode: true), '');
+
+    // 3. Amélioration des pauses après un point et une exclamation
+    cleanText = cleanText.replaceAll('\n\n', '. ');
+    cleanText = cleanText.replaceAll('!', '! ');
+
+    await _flutterTts.speak(cleanText);
   }
 
   void _scrollToBottom() {
@@ -102,7 +120,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("LAURA", style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, letterSpacing: 2)),
-                const Text("Your AI Coach", style: TextStyle(fontSize: 10, color: AuraColors.mintNeon)),
+                const Text("Ta coach ", style: TextStyle(fontSize: 10, color: AuraColors.mintNeon)),
               ],
             ),
           ],
@@ -138,7 +156,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: AuraColors.electricCyan),
                   ),
                   SizedBox(width: 12),
-                  Text("Laura is thinking...", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text("Donne moi un moment pour réfléchir à ta requête...", style: TextStyle(color: Colors.white54, fontSize: 12)),
                 ],
               ),
             ),
@@ -211,7 +229,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   controller: _controller,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: "Ask Laura anything...",
+                    hintText: "Besoin d'aide ?",
                     hintStyle: const TextStyle(color: Colors.white24),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.05),
