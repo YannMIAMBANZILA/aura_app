@@ -24,11 +24,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Uint8List? _selectedImage;
 
   final List<String> _suggestions = [
-    "Explain Thales' theorem to me",
-    "Correct my English text",
-    "Quick quiz on World War II",
-    "Tips for memorizing dates",
-    "Help me with a physics assignment",
+    "Explique moi le théorème de Thalès",
+    "Corrige mon texte en anglais",
+    "Quiz rapide sur la Seconde Guerre mondiale",
+    "Astuces pour mémoriser les dates",
+    "Aide moi pour un devoir de physique",
   ];
 
   @override

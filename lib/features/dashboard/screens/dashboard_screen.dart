@@ -138,7 +138,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final int currentAura = ref.watch(auraProvider);
 
+    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
     return Scaffold(
+      key: scaffoldKey,
+      drawer: _buildDrawer(context),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -186,19 +190,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ],
                     ),
 
-                    // BOUTON PROFIL
+                    // MENU BURGER
                     IconButton(
-                      onPressed: () {
-                        if (_isGuest) {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-                        } else {
-                          Navigator.push(
-                              context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
-                        }
-                      },
-                      icon: Icon(
-                        _isGuest ? Icons.login : Icons.account_circle,
-                        color: _isGuest ? AuraColors.softCoral : AuraColors.electricCyan,
+                      onPressed: () => scaffoldKey.currentState?.openDrawer(),
+                      icon: const Icon(
+                        Icons.menu_rounded,
+                        color: AuraColors.electricCyan,
+                        size: 28,
                       ),
                     ),
                   ],
@@ -240,17 +238,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                 const SizedBox(height: 40),
 
-                Text("CHOISIS TA MATIÈRE", style: AuraTextStyles.subtitle),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: subjects.map((s) => _buildSubjectChip(s)).toList(),
-                ),
-
-                const SizedBox(height: 40),
-
                 // BOUTONS D'ACTION
                 Column(
                   children: [
@@ -265,14 +252,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           side: const BorderSide(color: AuraColors.electricCyan, width: 2),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SessionScreen(subject: selectedSubject),
-                            ),
-                          );
-                        },
+                        onPressed: () => _showSubjectPicker(context, isQuiz: true),
                         child: Text(
                           "S'ENTRAÎNER (QUIZ)",
                           style: GoogleFonts.spaceGrotesk(
@@ -293,18 +273,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                           backgroundColor: AuraColors.mintNeon.withOpacity(0.05),
                         ),
-                        onPressed: () {
-                          final subjectColor = subjects.firstWhere((s) => s['name'] == selectedSubject)['color'];
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LessonSelectionScreen(
-                                subject: selectedSubject,
-                                subjectColor: subjectColor,
-                              ),
-                            ),
-                          );
-                        },
+                        onPressed: () => _showSubjectPicker(context, isQuiz: false),
                         child: Text(
                           "APPRENDRE UN COURS",
                           style: GoogleFonts.spaceGrotesk(
@@ -317,13 +286,221 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 40),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
 
+  // 👇 MENU BURGER (DRAWER) PREMIUM
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: AuraColors.deepSpaceBlue,
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(right: BorderSide(color: Colors.white10, width: 1)),
+        ),
+        child: Column(
+          children: [
+            // Drawer Header avec Laura
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: AuraColors.electricCyan.withOpacity(0.05),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircleAvatar(
+                      radius: 35,
+                      backgroundColor: AuraColors.electricCyan,
+                      child: CircleAvatar(
+                        radius: 33,
+                        backgroundImage: AssetImage('assets/images/laura_avatar.png'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "AURA APP",
+                      style: GoogleFonts.spaceGrotesk(
+                        color: AuraColors.electricCyan,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Menu Items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _buildDrawerTile(
+                    icon: Icons.person_outline_rounded,
+                    title: "Profil élève",
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (_isGuest) {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                      } else {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                      }
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.gavel_rounded,
+                    title: "Mentions légales",
+                    onTap: () {
+                      // Action pour mentions légales
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.privacy_tip_outlined,
+                    title: "Politique de confidentialité",
+                    onTap: () {
+                      // Action pour confidentialité
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.mail_outline_rounded,
+                    title: "Nous contacter",
+                    onTap: () {
+                      // Action pour contact
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.settings_outlined,
+                    title: "Paramètres de l'app",
+                    onTap: () {
+                      // Action pour paramètres
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            
+            // Version & Copyright
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Text(
+                "Version 1.0.0 • © 2026 Aura",
+                style: GoogleFonts.inter(color: Colors.white24, fontSize: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerTile({required IconData icon, required String title, required VoidCallback onTap}) {
+    return ListTile(
+      leading: Icon(icon, color: AuraColors.electricCyan, size: 22),
+      title: Text(
+        title,
+        style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onTap: onTap,
+      hoverColor: AuraColors.electricCyan.withOpacity(0.1),
+    );
+  }
+
+  // 👇 SÉLECTEUR DE MATIÈRE PREMIUM (MODAL)
+  void _showSubjectPicker(BuildContext context, {required bool isQuiz}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: AuraColors.deepSpaceBlue,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          border: Border(top: BorderSide(color: Colors.white12, width: 1)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "CHOISIS TA MATIÈRE",
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                color: isQuiz ? AuraColors.electricCyan : AuraColors.mintNeon,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.5,
+                ),
+                itemCount: subjects.length,
+                itemBuilder: (context, index) {
+                  final s = subjects[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context); // Ferme le modal
+                      if (isQuiz) {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => SessionScreen(subject: s['name'])));
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LessonSelectionScreen(
+                              subject: s['name'],
+                              subjectColor: s['color'],
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: s['color'].withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: s['color'].withOpacity(0.3), width: 1),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(s['icon'], color: s['color'], size: 30),
+                          const SizedBox(height: 8),
+                          Text(
+                            s['name'],
+                            style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
