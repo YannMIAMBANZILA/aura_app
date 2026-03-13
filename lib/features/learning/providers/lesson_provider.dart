@@ -56,9 +56,20 @@ class LessonNotifier extends StateNotifier<LessonState> {
         isLoading: false,
       );
     } catch (e) {
+      String errorMessage = "Erreur lors de la génération du cours.";
+      final errorStr = e.toString();
+      
+      if (errorStr.contains("429") || errorStr.contains("quota")) {
+        errorMessage = "Quota dépassé (Gemini). Attend une minute ou vérifie ton forfait sur Google AI Studio. ⏳";
+      } else if (errorStr.contains("not found")) {
+        errorMessage = "Modèle introuvable. Une mise à jour du service est peut-être nécessaire. 🛠️";
+      } else {
+        errorMessage = "Oups ! Quelque chose a coincé : ${errorStr.split(':').last.trim()}";
+      }
+
       state = state.copyWith(
         isLoading: false,
-        error: "Erreur lors de la génération du cours. Réessaie !",
+        error: errorMessage,
       );
     }
   }

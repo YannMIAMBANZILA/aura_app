@@ -27,4 +27,15 @@ class Question {
       hint: map['hint'] ?? 'Concentre-toi !',
     );
   }
+
+  factory Question.fromLessonQuiz(String subject, dynamic lessonQuiz) {
+    return Question(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      subject: subject,
+      text: lessonQuiz.question,
+      options: List<String>.from(lessonQuiz.options),
+      correctOptionIndex: lessonQuiz.correctIndex,
+      hint: lessonQuiz.explanation,
+    );
+  }
 }

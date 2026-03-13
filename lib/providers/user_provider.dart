@@ -131,6 +131,25 @@ class AuraScoreNotifier extends StateNotifier<int> {
     };
   }
 
+  // 👇 RÉCOMPENSE L'EFFORT DE LECTURE (+25)
+  Future<void> addPoints(int points) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    final prefs = await SharedPreferences.getInstance();
+
+    state += points;
+    await prefs.setInt(_storageKey, state);
+
+    if (user != null) {
+      try {
+        await Supabase.instance.client.from('profiles').update({
+          'aura_points': state,
+        }).eq('id', user.id);
+      } catch (e) {
+        print("Erreur addPoints Cloud: $e");
+      }
+    }
+  }
+
   Future<String?> _checkAndUnlockBadges(int streak) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return null;

@@ -6,8 +6,11 @@ import '../../../models/lesson_content.dart';
 import '../providers/lesson_provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'lesson_chat_screen.dart';
+import 'session_screen.dart';
 import 'revision_card_edit_screen.dart';
 import '../../../services/chat_service.dart';
+import '../../../models/question.dart';
+import '../../../providers/user_provider.dart';
 
 class LessonCarouselScreen extends ConsumerStatefulWidget {
   final String subject;
@@ -26,6 +29,7 @@ class LessonCarouselScreen extends ConsumerStatefulWidget {
 class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _rewardAwarded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -138,13 +142,29 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
       _buildExamplePage(content.example),
       _buildProPage(content.proPointCareer, content.proPointApplication),
       _buildKeyPointsPage(content.keyPoints),
-      _buildQuizIntroPage(),
+      _buildQuizIntroPage(content.quizQuestions),
       _buildRevisionCardPage(content.keyPoints),
     ];
 
     return PageView.builder(
       controller: _pageController,
-      onPageChanged: (idx) => setState(() => _currentPage = idx),
+      onPageChanged: (idx) {
+        setState(() => _currentPage = idx);
+        
+        // 💡 RÉCOMPENSE : Si on arrive à la fin (Fiche de révision)
+        if (idx == pages.length - 1 && !_rewardAwarded) {
+          _rewardAwarded = true;
+          ref.read(auraProvider.notifier).addPoints(25);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Belle lecture ! Ton Aura grandit de +25 ✨"),
+              duration: Duration(seconds: 2),
+              backgroundColor: AuraColors.mintNeon,
+            ),
+          );
+        }
+      },
       itemCount: pages.length,
       itemBuilder: (context, index) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -307,7 +327,7 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
     );
   }
 
-  Widget _buildQuizIntroPage() {
+  Widget _buildQuizIntroPage(List<LessonQuizQuestion> questions) {
     return Container(
       decoration: BoxDecoration(
         color: AuraColors.electricCyan.withOpacity(0.05),
@@ -340,12 +360,16 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
             onPressed: () {
-               Navigator.push(
+              final mappedQuestions = questions.map(
+                (q) => Question.fromLessonQuiz(widget.subject, q)
+              ).toList();
+
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => LessonChatScreen(
+                  builder: (_) => SessionScreen(
                     subject: widget.subject,
-                    chapter: widget.chapter,
+                    initialQuestions: mappedQuestions,
                   ),
                 ),
               );

@@ -11,8 +11,13 @@ import '../../dashboard/widgets/stats_charts.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
   final String subject;
+  final List<Question>? initialQuestions;
 
-  const SessionScreen({super.key, required this.subject});
+  const SessionScreen({
+    super.key, 
+    required this.subject, 
+    this.initialQuestions,
+  });
 
   @override
   ConsumerState<SessionScreen> createState() => _SessionScreenState();
@@ -36,6 +41,18 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   Future<void> _fetchQuestions() async {
+    // Si on a déjà des questions (passées depuis Laura), pas besoin d'aller en chercher
+    if (widget.initialQuestions != null && widget.initialQuestions!.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _questions = widget.initialQuestions!;
+          _isLoading = false;
+          _lauraMessage = "Prête ? Laura t'a préparé un quiz sur mesure ! ✨";
+        });
+      }
+      return;
+    }
+
     try {
       final response = await Supabase.instance.client
           .from('questions')
