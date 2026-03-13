@@ -3,65 +3,157 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:aura_app/config/theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+// Modèle pour les stats
+// Provider pour l'onglet de temps (Jour, Semaine, Mois)
+enum Timeframe { day, week, month }
+
+final timeframeProvider = StateProvider<Timeframe>((ref) => Timeframe.week);
+
+// Provider pour filtrer l'activité par index de barre sélectionnée
+final selectedBarIndexProvider = StateProvider<int?>((ref) => null);
 
 // Modèle pour les stats
 class AuraStats {
-  final Map<int, int> weeklyActivity;
+  final List<BarChartGroupData> activityGroups;
   final Map<String, int> subjectDistribution;
+  final double maxY;
+  final List<String> xLabels;
 
-  AuraStats({required this.weeklyActivity, required this.subjectDistribution});
+  AuraStats({
+    required this.activityGroups, 
+    required this.subjectDistribution, 
+    required this.maxY,
+    required this.xLabels,
+  });
 }
 
 // Provider pour récupérer les stats
 final statsProvider = FutureProvider<AuraStats>((ref) async {
   final user = Supabase.instance.client.auth.currentUser;
+  final timeframe = ref.watch(timeframeProvider);
   
-  // Default data structure
-  Map<int, int> activity = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0};
-  // Initialize with at least 3 subjects to satisfy RadarChart requirements
-  Map<String, int> distribution = {
-    'Maths': 0,
-    'Français': 0,
-    'Physique': 0,
-    'Histoire': 0,
-    'Anglais': 0,
-    'Philo': 0,
-  };
-
   if (user == null) {
-    return AuraStats(weeklyActivity: activity, subjectDistribution: distribution);
+    return AuraStats(
+      activityGroups: [], 
+      subjectDistribution: {}, 
+      maxY: 5, 
+      xLabels: [],
+    );
   }
 
   try {
-    // On récupère tout (*) pour être sûr de ne pas crasher si une colonne spécifique manque au début
     final response = await Supabase.instance.client
         .from('study_sessions')
         .select()
         .eq('user_id', user.id); 
 
     final List<dynamic> data = response as List<dynamic>;
+    Map<String, int> distribution = {};
+    Map<String, int> activityMap = {};
+    List<String> labels = [];
 
-    for (var session in data) {
-      if (session['created_at'] != null) {
+    final now = DateTime.now();
+
+    if (timeframe == Timeframe.week) {
+      // 7 derniers jours
+      labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+      for (int i = 1; i <= 7; i++) activityMap[i.toString()] = 0;
+      
+      for (var session in data) {
         final date = DateTime.parse(session['created_at']).toLocal();
-        if (date.weekday >= 1 && date.weekday <= 7) {
-           activity[date.weekday] = (activity[date.weekday] ?? 0) + 1;
+        // Filtrer par semaine actuelle (ou 7 derniers jours ?)
+        // On va rester sur les jours de la semaine ISO pour l'instant
+        activityMap[date.weekday.toString()] = (activityMap[date.weekday.toString()] ?? 0) + 1;
+        
+        String? subject = session['subject'] as String?;
+        if (subject != null && subject != 'Général' && subject.isNotEmpty) {
+          distribution[subject] = (distribution[subject] ?? 0) + 1;
         }
       }
-
-      // Gestion robuste du sujet
-      String? subject = session['subject'] as String?;
-      if (subject == null || subject.isEmpty) {
-        subject = 'Général';
+    } else if (timeframe == Timeframe.day) {
+      // Dernières 24h par tranches de 4h ? Ou les 7 derniers jours ?
+      // L'utilisateur dit "trié par jour", on va montrer les 7 derniers jours avec la date
+      for (int i = 6; i >= 0; i--) {
+        final d = now.subtract(Duration(days: i));
+        final key = "${d.day}/${d.month}";
+        labels.add(key);
+        activityMap[key] = 0;
       }
-      
-      distribution[subject] = (distribution[subject] ?? 0) + 1;
+      for (var session in data) {
+        final date = DateTime.parse(session['created_at']).toLocal();
+        final key = "${date.day}/${date.month}";
+        if (activityMap.containsKey(key)) {
+          activityMap[key] = (activityMap[key] ?? 0) + 1;
+        }
+        
+        String? subject = session['subject'] as String?;
+        if (subject != null && subject != 'Général' && subject.isNotEmpty) {
+          distribution[subject] = (distribution[subject] ?? 0) + 1;
+        }
+      }
+    } else {
+      // Mois de l'année
+      labels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+      for (int i = 1; i <= 12; i++) activityMap[i.toString()] = 0;
+      for (var session in data) {
+        final date = DateTime.parse(session['created_at']).toLocal();
+        if (date.year == now.year) {
+          activityMap[date.month.toString()] = (activityMap[date.month.toString()] ?? 0) + 1;
+        }
+        String? subject = session['subject'] as String?;
+        if (subject != null && subject != 'Général' && subject.isNotEmpty) {
+          distribution[subject] = (distribution[subject] ?? 0) + 1;
+        }
+      }
     }
 
-    return AuraStats(weeklyActivity: activity, subjectDistribution: distribution);
+    double mY = 5.0;
+    if (activityMap.isNotEmpty) {
+      final maxValue = activityMap.values.fold(0, (prev, element) => element > prev ? element : prev);
+      mY = (maxValue + 2).toDouble();
+    }
+
+    final List<BarChartGroupData> groups = [];
+    for (int i = 0; i < labels.length; i++) {
+      String key;
+      if (timeframe == Timeframe.week) key = (i + 1).toString();
+      else if (timeframe == Timeframe.day) key = labels[i];
+      else key = (i + 1).toString();
+
+      final count = activityMap[key] ?? 0;
+      groups.add(BarChartGroupData(
+        x: i,
+        barRods: [
+          BarChartRodData(
+            toY: count.toDouble(),
+            gradient: LinearGradient(
+              colors: [AuraColors.electricCyan, AuraColors.electricCyan.withOpacity(0.1)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            width: 14,
+            borderRadius: BorderRadius.circular(4),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: mY,
+              color: Colors.white.withOpacity(0.05),
+            ),
+          ),
+        ],
+      ));
+    }
+
+    return AuraStats(
+      activityGroups: groups,
+      subjectDistribution: distribution.isEmpty ? {'Maths':0, 'Français':0, 'Physique':0} : distribution,
+      maxY: mY,
+      xLabels: labels,
+    );
   } catch (e) {
     print("Erreur Stats: $e");
-    return AuraStats(weeklyActivity: activity, subjectDistribution: distribution);
+    return AuraStats(activityGroups: [], subjectDistribution: {}, maxY: 5, xLabels: []);
   }
 });
 
@@ -71,6 +163,7 @@ class StatsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(statsProvider);
+    final timeframe = ref.watch(timeframeProvider);
 
     return statsAsync.when(
       data: (stats) => Column(
@@ -79,9 +172,22 @@ class StatsSection extends ConsumerWidget {
           Center(child: Text("ANALYSE DE L'AURA", style: AuraTextStyles.subtitle.copyWith(fontSize: 18, color: AuraColors.electricCyan))),
           const SizedBox(height: 24),
 
-          Center(child: Text("ACTIVITÉ HEBDOMADAIRE", style: AuraTextStyles.subtitle, textAlign: TextAlign.center)),
+          // TOGGLE TIMEFRAME
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildTimeframeButton(ref, "Jour", Timeframe.day, timeframe == Timeframe.day),
+              const SizedBox(width: 8),
+              _buildTimeframeButton(ref, "Semaine", Timeframe.week, timeframe == Timeframe.week),
+              const SizedBox(width: 8),
+              _buildTimeframeButton(ref, "Mois", Timeframe.month, timeframe == Timeframe.month),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          Center(child: Text("ACTIVITÉ ${timeframe.name.toUpperCase() == 'DAY' ? 'QUOTIDIENNE' : timeframe.name.toUpperCase() == 'WEEK' ? 'HEBDOMADAIRE' : 'MENSUELLE'}", style: AuraTextStyles.subtitle, textAlign: TextAlign.center)),
           const SizedBox(height: 16),
-          _buildActivityChart(stats.weeklyActivity),
+          _buildActivityChart(ref, stats),
           
           const SizedBox(height: 40),
           
@@ -95,15 +201,34 @@ class StatsSection extends ConsumerWidget {
     );
   }
 
-  Widget _buildActivityChart(Map<int, int> weeklyActivity) {
-    double maxY = 5.0; 
-    if (weeklyActivity.isNotEmpty) {
-      final maxValue = weeklyActivity.values.fold(0, (prev, element) => element > prev ? element : prev);
-      maxY = (maxValue + 2).toDouble();
-    }
+  Widget _buildTimeframeButton(WidgetRef ref, String label, Timeframe value, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        ref.read(timeframeProvider.notifier).state = value;
+        ref.read(selectedBarIndexProvider.notifier).state = null; // Reset filter
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AuraColors.electricCyan.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AuraColors.electricCyan : Colors.white10),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.spaceGrotesk(
+            color: isSelected ? AuraColors.electricCyan : Colors.white38,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
 
+  Widget _buildActivityChart(WidgetRef ref, AuraStats stats) {
     return Container(
-      height: 200,
+      height: 220,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AuraColors.abyssalGrey,
@@ -113,8 +238,17 @@ class StatsSection extends ConsumerWidget {
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
-          maxY: maxY,
+          maxY: stats.maxY,
           barTouchData: BarTouchData(
+            touchCallback: (FlTouchEvent event, barTouchResponse) {
+              if (!event.isInterestedForInteractions ||
+                  barTouchResponse == null ||
+                  barTouchResponse.spot == null) {
+                return;
+              }
+              final index = barTouchResponse.spot!.touchedBarGroupIndex;
+              ref.read(selectedBarIndexProvider.notifier).state = index;
+            },
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (_) => Colors.black87,
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
@@ -131,11 +265,11 @@ class StatsSection extends ConsumerWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
-                  const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-                  if (value.toInt() >= 0 && value.toInt() < 7) {
+                  final index = value.toInt();
+                  if (index >= 0 && index < stats.xLabels.length) {
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(days[value.toInt()], style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      child: Text(stats.xLabels[index], style: const TextStyle(color: Colors.white54, fontSize: 10)),
                     );
                   }
                   return const SizedBox();
@@ -152,37 +286,21 @@ class StatsSection extends ConsumerWidget {
             getDrawingHorizontalLine: (value) => const FlLine(color: Colors.white10, strokeWidth: 1),
           ),
           borderData: FlBorderData(show: false),
-          barGroups: List.generate(7, (index) {
-            final count = weeklyActivity[index + 1] ?? 0;
-            return BarChartGroupData(
-              x: index,
-              barRods: [
-                BarChartRodData(
-                  toY: count.toDouble(),
-                  gradient: LinearGradient(
-                    colors: [AuraColors.electricCyan, AuraColors.electricCyan.withOpacity(0.0)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  width: 12,
-                  borderRadius: BorderRadius.circular(4),
-                  backDrawRodData: BackgroundBarChartRodData(
-                    show: true,
-                    toY: maxY,
-                    color: Colors.white.withOpacity(0.05),
-                  ),
-                ),
-              ],
-            );
-          }),
+          barGroups: stats.activityGroups,
         ),
       ),
     );
   }
 
   Widget _buildRadarChart(Map<String, int> subjectDistribution) {
-    final subjects = subjectDistribution.keys.toList();
-    final counts = subjectDistribution.values.toList();
+    // Filtrer 'Général' est déjà fait dans le provider, mais on s'assure d'avoir au moins 3 points
+    final entries = subjectDistribution.entries.toList();
+    if (entries.length < 3) {
+      // Padding pour le RadarChart qui a besoin de 3 points minimum
+      while (entries.length < 3) {
+        entries.add(const MapEntry('...', 0));
+      }
+    }
     
     return Container(
       height: 300,
@@ -200,16 +318,16 @@ class StatsSection extends ConsumerWidget {
           titlePositionPercentageOffset: 0.2,
           titleTextStyle: const TextStyle(color: Colors.white, fontSize: 12),
           getTitle: (index, angle) {
-            if (index < subjects.length) return RadarChartTitle(text: subjects[index]);
+            if (index < entries.length) return RadarChartTitle(text: entries[index].key);
             return const RadarChartTitle(text: "");
           },
           tickCount: 3,
           dataSets: [
              RadarDataSet(
-              fillColor: AuraColors.purple.withOpacity(0.2), // Variation couleur
+              fillColor: AuraColors.purple.withOpacity(0.2),
               borderColor: AuraColors.purple,
               entryRadius: 3,
-              dataEntries: counts.map((c) => RadarEntry(value: c.toDouble())).toList(),
+              dataEntries: entries.map((e) => RadarEntry(value: e.value.toDouble())).toList(),
               borderWidth: 2,
             ),
           ],

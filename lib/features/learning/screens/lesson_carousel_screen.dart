@@ -11,6 +11,8 @@ import 'revision_card_edit_screen.dart';
 import '../../../services/chat_service.dart';
 import '../../../models/question.dart';
 import '../../../providers/user_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../dashboard/widgets/stats_charts.dart';
 
 class LessonCarouselScreen extends ConsumerStatefulWidget {
   final String subject;
@@ -155,6 +157,7 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
         if (idx == pages.length - 1 && !_rewardAwarded) {
           _rewardAwarded = true;
           ref.read(auraProvider.notifier).addPoints(25);
+          _saveLearningSession();
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -171,6 +174,25 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
         child: pages[index],
       ),
     );
+  }
+
+  Future<void> _saveLearningSession() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      try {
+        await Supabase.instance.client.from('study_sessions').insert({
+          'user_id': user.id,
+          'subject': widget.subject,
+          'points_earned': 25,
+          'game_mode': 'Cours Interactif',
+          'chapter': widget.chapter,
+        });
+        // Invalidate stats to refresh charts
+        ref.invalidate(statsProvider);
+      } catch (e) {
+        print("Erreur save learning session: $e");
+      }
+    }
   }
 
   Widget _buildPageIndicator(LessonState state) {

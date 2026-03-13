@@ -20,6 +20,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isLoading = true;
+  bool _isGuest = true;
   Map<String, dynamic>? _profileData;
   List<dynamic> _history = [];
 
@@ -31,7 +32,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _loadProfileData() async {
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    setState(() => _isGuest = false);
 
     try {
       // 1. Récupérer le Profil (Points + Pseudo)
@@ -135,12 +140,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             const SizedBox(height: 40),
 
-            // 2. STATS RAPIDES
+            // 2. STATS RAPIDES (Ligne de 3)
             Row(
               children: [
-                _buildStatCard("Total Points", "$score", Icons.auto_awesome),
-                const SizedBox(width: 16),
-                _buildStatCard("Sessions", "${_history.length}", Icons.history), 
+                _buildStatCard("Aura Points", "$score", Icons.auto_awesome),
+                const SizedBox(width: 12),
+                _buildStatCard("Sessions", "${_history.length}", Icons.history),
+                const SizedBox(width: 12),
+                _buildStatCard(
+                  "Mes Fiches", 
+                  "Voir", 
+                  Icons.sticky_note_2_outlined, 
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RevisionCardListScreen()))
+                ),
               ],
             ),
 
@@ -158,134 +170,227 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             
             const SizedBox(height: 40),
 
-            // 2.9 MES FICHES
-            _buildActionTile(
-              context,
-              "Mes Fiches",
-              "Gère tes fiches de révision PDF",
-              Icons.sticky_note_2_outlined,
-              AuraColors.mintNeon,
-              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RevisionCardListScreen())),
+            // 3. DERNIÈRES ACTIVITÉS AVEC FILTRES
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("DERNIÈRES ACTIVITÉS", style: Theme.of(context).textTheme.bodyMedium),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.sort_rounded, color: Colors.white54, size: 20),
+                      onPressed: () => _showSortOptions(),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            
-            const SizedBox(height: 40),
-            
-            Center(child: Text("DERNIÈRES ACTIVITÉS", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center)),
             const SizedBox(height: 16),
 
-            // 3. HISTORIQUE
-            if (_history.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text("Aucune session enregistrée pour l'instant.", style: TextStyle(color: Colors.white30)),
-              )
-            else
-              ..._history.map((session) {
-                // Formatage simple de la date
-                final date = DateTime.parse(session['created_at']).toLocal();
-                final dateStr = "${date.day}/${date.month} à ${date.hour}h${date.minute}";
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: AuraColors.abyssalGrey,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      final answers = session['answers_json'];
-                      if (answers != null && answers is List && answers.isNotEmpty) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SessionReviewScreen(
-                              answers: answers,
-                              dateStr: dateStr,
-                            ),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Détails non disponibles pour cette session.")),
-                        );
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(session['game_mode'] ?? "Entraînement", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                              Text(dateStr, style: const TextStyle(color: Colors.white30, fontSize: 12)),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                "+${session['points_earned']}",
-                                style: const TextStyle(color: AuraColors.mintNeon, fontWeight: FontWeight.bold, fontSize: 18),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 12),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
+            // LISTE DES ACTIVITÉS
+            _buildActivityList(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AuraColors.abyssalGrey,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AuraColors.electricCyan, size: 30),
-            const SizedBox(height: 8),
-            Text(value, style: GoogleFonts.spaceGrotesk(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-            Text(label, style: const TextStyle(color: Colors.white30, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-  Widget _buildActionTile(BuildContext context, String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AuraColors.abyssalGrey,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+  String _sortMode = 'date'; // 'date', 'points', 'subject'
+  int _currentPage = 0;
+  final int _pageSize = 5;
+
+  void _showSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AuraColors.deepSpaceBlue,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.calendar_today, color: AuraColors.electricCyan),
+            title: const Text("Trier par date", style: TextStyle(color: Colors.white)),
+            onTap: () { setState(() => _sortMode = 'date'); Navigator.pop(context); },
           ),
-          child: Icon(icon, color: color),
+          ListTile(
+            leading: const Icon(Icons.star_outline, color: AuraColors.electricCyan),
+            title: const Text("Trier par points", style: TextStyle(color: Colors.white)),
+            onTap: () { setState(() => _sortMode = 'points'); Navigator.pop(context); },
+          ),
+          ListTile(
+            leading: const Icon(Icons.subject, color: AuraColors.electricCyan),
+            title: const Text("Trier par matière", style: TextStyle(color: Colors.white)),
+            onTap: () { setState(() => _sortMode = 'subject'); Navigator.pop(context); },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityList() {
+    if (_history.isEmpty) {
+      return const Center(child: Text("Aucune activité", style: TextStyle(color: Colors.white24)));
+    }
+
+    final selectedIndex = ref.watch(selectedBarIndexProvider);
+    final timeframe = ref.watch(timeframeProvider);
+    final statsAsync = ref.watch(statsProvider);
+
+    // Filter by selected bar
+    List<dynamic> filteredList = List.from(_history);
+    if (selectedIndex != null) {
+      statsAsync.whenData((stats) {
+        if (selectedIndex >= 0 && selectedIndex < stats.xLabels.length) {
+          final label = stats.xLabels[selectedIndex];
+          filteredList = filteredList.where((session) {
+            final date = DateTime.parse(session['created_at']).toLocal();
+            if (timeframe == Timeframe.week) {
+              return date.weekday == (selectedIndex + 1);
+            } else if (timeframe == Timeframe.day) {
+              final key = "${date.day}/${date.month}";
+              return key == label;
+            } else {
+              return date.month == (selectedIndex + 1);
+            }
+          }).toList();
+        }
+      });
+    }
+
+    // Tri
+    if (_sortMode == 'points') {
+      filteredList.sort((a, b) => (b['points_earned'] as int).compareTo(a['points_earned'] as int));
+    } else if (_sortMode == 'subject') {
+      filteredList.sort((a, b) => (a['subject'] ?? '').compareTo(b['subject'] ?? ''));
+    } else {
+      filteredList.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+    }
+
+    // Pagination
+    final startIndex = _currentPage * _pageSize;
+    final endIndex = (startIndex + _pageSize) < filteredList.length ? (startIndex + _pageSize) : filteredList.length;
+    final pagedList = startIndex < filteredList.length ? filteredList.sublist(startIndex, endIndex) : [];
+
+    return Column(
+      children: [
+        if (selectedIndex != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                const Icon(Icons.filter_list, color: AuraColors.electricCyan, size: 14),
+                const SizedBox(width: 8),
+                Text("Filtre actif", style: GoogleFonts.inter(color: AuraColors.electricCyan, fontSize: 12)),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => ref.read(selectedBarIndexProvider.notifier).state = null,
+                  child: const Text("Effacer", style: TextStyle(color: Colors.white30, fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+        ...pagedList.map((session) {
+          final date = DateTime.parse(session['created_at']).toLocal();
+          final dateStr = DateFormat('dd/MM HH:mm').format(date);
+          final subject = session['subject'] ?? "Général";
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AuraColors.abyssalGrey,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: ListTile(
+              onTap: () {
+                if (session['game_mode'] == 'Session Rapide') {
+                   final answers = session['answers_json'];
+                   if (answers != null && answers is List && answers.isNotEmpty) {
+                     Navigator.push(
+                       context,
+                       MaterialPageRoute(
+                         builder: (_) => SessionReviewScreen(
+                           answers: answers,
+                           dateStr: dateStr,
+                         ),
+                       ),
+                     );
+                   } else {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(content: Text("Détails non disponibles pour ce quiz.")),
+                     );
+                   }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(content: Text("Cours terminé : ${session['chapter'] ?? session['subject']}")),
+                  );
+                }
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: session['game_mode'] == 'Session Rapide' 
+                      ? AuraColors.electricCyan.withOpacity(0.1)
+                      : AuraColors.mintNeon.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  session['game_mode'] == 'Session Rapide' ? Icons.bolt : Icons.menu_book, 
+                  color: session['game_mode'] == 'Session Rapide' ? AuraColors.electricCyan : AuraColors.mintNeon, 
+                  size: 20
+                ),
+              ),
+              title: Text(session['game_mode'] ?? "Session", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              subtitle: Text("$dateStr • $subject • +${session['points_earned']} pts", style: const TextStyle(color: Colors.white30, fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 12),
+            ),
+          );
+        }),
+        if (filteredList.isEmpty && selectedIndex != null)
+          const Center(child: Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Text("Aucune activité pour cette période", style: TextStyle(color: Colors.white24)),
+          )),
+        const SizedBox(height: 16),
+        // Pagination Controls
+        if (filteredList.length > _pageSize)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left, color: Colors.white54),
+                onPressed: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
+              ),
+              Text("Page ${_currentPage + 1}", style: const TextStyle(color: Colors.white54)),
+              IconButton(
+                icon: const Icon(Icons.chevron_right, color: Colors.white54),
+                onPressed: endIndex < filteredList.length ? () => setState(() => _currentPage++) : null,
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, {VoidCallback? onTap}) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+          decoration: BoxDecoration(
+            color: AuraColors.abyssalGrey,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _isGuest && label == "Sessions" ? Colors.transparent : Colors.white10),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: AuraColors.electricCyan, size: 24),
+              const SizedBox(height: 8),
+              Text(value, style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text(label, style: const TextStyle(color: Colors.white30, fontSize: 10), textAlign: TextAlign.center),
+            ],
+          ),
         ),
-        title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white30, fontSize: 12)),
-        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 16),
       ),
     );
   }
