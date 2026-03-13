@@ -45,6 +45,12 @@
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<key>NSCameraUsageDescription</key>
+		<string>Tu dois me permettre d'accéder à ta caméra pour que je puisse voir ce que tu veux m'envoyer.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Tu dois me permettre d'accéder à ton micro pour pouvoir me parler de vive voix.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Tu dois me permettre d'accéder à ta galerie pour m'envoyer tes images.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>
