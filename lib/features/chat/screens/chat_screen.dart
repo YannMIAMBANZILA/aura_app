@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import '../../../config/theme.dart';
 import '../../../models/chat_message.dart';
 import '../providers/chat_provider.dart';
+import '../../../providers/user_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -32,14 +33,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _currentlySpeakingText = "";
   final double _normalSpeechRate = 0.5;
   final double _fastSpeechRate = 0.75;
-
-  final List<String> _suggestions = [
-    "Explique moi le théorème de Thalès",
-    "Corrige mon texte en anglais",
-    "Quiz rapide sur la Seconde Guerre mondiale",
-    "Astuces pour mémoriser les dates",
-    "Aide moi pour un devoir de physique",
-  ];
 
   @override
   void initState() {
@@ -244,11 +237,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  void _useSuggestion(String text) {
-    _controller.text = text;
-    _handleSend();
-  }
-
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
@@ -382,27 +370,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (ref.read(chatProvider).currentMessages.length <= 1) ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: _suggestions.map((suggestion) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ActionChip(
-                    label: Text(suggestion),
-                    labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
-                    backgroundColor: Colors.white.withOpacity(0.05),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: const BorderSide(color: Colors.white10),
-                    ),
-                    onPressed: () => _useSuggestion(suggestion),
-                  ),
-                )).toList(),
-              ),
-            ),
-          ],
           if (_selectedImage != null)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -424,20 +391,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               IconButton(
                 icon: const Icon(Icons.add_a_photo, color: AuraColors.electricCyan),
                 onPressed: _showImageSourceDialog,
-              ),
-              IconButton(
-                icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: _isListening ? AuraColors.softCoral : AuraColors.electricCyan),
-                onPressed: _listen,
+                padding: const EdgeInsets.only(bottom: 8),
               ),
               Expanded(
                 child: TextField(
                   controller: _controller,
+                  minLines: 1,
+                  maxLines: 5,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
+                    prefixIcon: IconButton(
+                      icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: _isListening ? AuraColors.softCoral : AuraColors.electricCyan),
+                      onPressed: _listen,
+                    ),
                     hintText: "Besoin d'aide ?",
                     hintStyle: const TextStyle(color: Colors.white24),
                     filled: true,
@@ -446,17 +417,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       borderRadius: BorderRadius.circular(25),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onSubmitted: (_) => _handleSend(),
                 ),
               ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                backgroundColor: AuraColors.electricCyan,
-                child: IconButton(
-                  icon: const Icon(Icons.send, color: Colors.black),
-                  onPressed: _handleSend,
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
+                child: CircleAvatar(
+                  backgroundColor: AuraColors.electricCyan,
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.black),
+                    onPressed: _handleSend,
+                  ),
                 ),
               ),
             ],
@@ -467,7 +440,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends ConsumerWidget {
   final ChatMessage message;
   final bool isSpeaking;
   final VoidCallback onPlayPause;
@@ -481,8 +454,11 @@ class _MessageBubble extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isUser = message.role == MessageRole.user;
+    final user = ref.watch(userProvider);
+    final userName = user?.name ?? 'Moi';
+    final userAvatar = user?.avatarUrl;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -517,14 +493,14 @@ class _MessageBubble extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isUser ? AuraColors.electricCyan.withOpacity(0.9) : AuraColors.abyssalGrey,
+                    color: isUser ? Colors.white.withOpacity(0.05) : AuraColors.abyssalGrey,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(20),
                       topRight: const Radius.circular(20),
                       bottomLeft: Radius.circular(isUser ? 20 : 0),
                       bottomRight: Radius.circular(isUser ? 0 : 20),
                     ),
-                    border: isUser ? null : Border.all(color: Colors.white10),
+                    border: isUser ? Border.all(color: AuraColors.electricCyan.withOpacity(0.5)) : Border.all(color: Colors.white10),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,18 +523,36 @@ class _MessageBubble extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                       ],
+                      if (isUser) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(userName.toUpperCase(), style: const TextStyle(color: AuraColors.mintNeon, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       MarkdownBody(
                         data: message.text,
                         styleSheet: MarkdownStyleSheet(
-                          p: TextStyle(color: isUser ? Colors.black : Colors.white, fontSize: 14),
-                          strong: TextStyle(color: isUser ? Colors.black : AuraColors.mintNeon, fontWeight: FontWeight.bold),
+                          p: const TextStyle(color: Colors.white, fontSize: 14),
+                          strong: const TextStyle(color: AuraColors.mintNeon, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              if (isUser) const SizedBox(width: 8),
+              if (isUser) ...[
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 15,
+                  backgroundColor: AuraColors.abyssalGrey,
+                  backgroundImage: userAvatar != null 
+                      ? NetworkImage(userAvatar) 
+                      : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                ),
+              ],
             ],
           ),
         ],

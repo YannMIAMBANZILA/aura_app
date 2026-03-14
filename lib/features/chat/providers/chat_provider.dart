@@ -76,7 +76,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   static final List<ChatMessage> _initialMessages = [
     ChatMessage(
-      text: "Salut ! Je suis Laura, ta coach. En quoi puis-je t'aider aujourd'hui ? 🎓",
+      text: "Salut ! Je suis Laura, ta coach. En quoi puis-je t'aider aujourd'hui ? 🎓\n\nTu peux me demander par exemple :\n- *Explique moi le théorème de Thalès*\n- *Corrige mon texte en anglais*\n- *Quiz rapide sur la Seconde Guerre mondiale*",
       role: MessageRole.laura,
     )
   ];

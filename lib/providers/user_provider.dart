@@ -221,6 +221,9 @@ class UserState {
   final User? user;
   UserState({this.user});
 
+  String get name => user?.userMetadata?['name'] ?? user?.email?.split('@')[0] ?? 'Moi';
+  String? get avatarUrl => user?.userMetadata?['avatar_url'];
+
   String getTitle(int score) {
     if (score < 1000) return "Aura Éveil";
     if (score < 100000) return "Aura Farmer";
