@@ -4,8 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../chat/screens/chat_screen.dart';
 import 'lesson_chat_screen.dart';
 import 'lesson_carousel_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/lesson_provider.dart';
+import '../../games/loading_game_screen.dart';
 
-class LessonSelectionScreen extends StatefulWidget {
+class LessonSelectionScreen extends ConsumerStatefulWidget {
   final String subject;
   final Color subjectColor;
 
@@ -16,10 +19,10 @@ class LessonSelectionScreen extends StatefulWidget {
   });
 
   @override
-  State<LessonSelectionScreen> createState() => _LessonSelectionScreenState();
+  ConsumerState<LessonSelectionScreen> createState() => _LessonSelectionScreenState();
 }
 
-class _LessonSelectionScreenState extends State<LessonSelectionScreen> {
+class _LessonSelectionScreenState extends ConsumerState<LessonSelectionScreen> {
   final Map<String, List<String>> _subjectChapters = {
     'Maths': ['Théorème de Thalès', 'Théorème de Pythagore', 'Calcul Littéral', 'Fonctions Affines', 'Probabilités'],
     'Français': ['L\'Accord du Participe Passé', 'Figures de Style', 'Analyse Linéaire', 'Le Surréalisme'],
@@ -79,16 +82,29 @@ class _LessonSelectionScreenState extends State<LessonSelectionScreen> {
 
   Widget _buildChapterCard(String chapterName) {
     return InkWell(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final futureLesson = ref.read(lessonProvider((subject: widget.subject, chapter: chapterName)).notifier).generateLessonIA();
+
+        final finalLessonData = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => LessonCarouselScreen(
-              subject: widget.subject,
-              chapter: chapterName,
+            builder: (context) => LoadingGameScreen(
+              lessonFuture: futureLesson,
             ),
           ),
         );
+
+        if (finalLessonData != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => LessonCarouselScreen(
+                subject: widget.subject,
+                chapter: chapterName,
+              ),
+            ),
+          );
+        }
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(

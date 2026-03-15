@@ -42,11 +42,11 @@ class LessonNotifier extends StateNotifier<LessonState> {
   final ChatService _chatService = ChatService();
 
   LessonNotifier({required String subject, required String chapter}) 
-    : super(LessonState(subject: subject, chapter: chapter)) {
-    _fetchLesson();
-  }
+    : super(LessonState(subject: subject, chapter: chapter));
 
-  Future<void> _fetchLesson() async {
+  Future<Map<String, dynamic>> generateLessonIA() async {
+    if (state.lessonContent != null) return {};
+
     state = state.copyWith(isLoading: true, error: null);
     try {
       final json = await _chatService.generateLessonContent(state.subject, state.chapter);
@@ -55,6 +55,7 @@ class LessonNotifier extends StateNotifier<LessonState> {
         lessonContent: lessonContent,
         isLoading: false,
       );
+      return json;
     } catch (e) {
       String errorMessage = "Erreur lors de la génération du cours.";
       final errorStr = e.toString();
@@ -71,6 +72,7 @@ class LessonNotifier extends StateNotifier<LessonState> {
         isLoading: false,
         error: errorMessage,
       );
+      throw Exception(errorMessage);
     }
   }
 
