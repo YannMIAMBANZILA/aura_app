@@ -23,6 +23,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isGuest = true;
   Map<String, dynamic>? _profileData;
   List<dynamic> _history = [];
+  String? _selectedGrade;
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         setState(() {
           _profileData = profileResponse;
+          _selectedGrade = profileResponse['grade_level'] as String?;
           _history = historyResponse;
           _isLoading = false;
         });
@@ -137,6 +139,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Text(rankTitle.toUpperCase(), style: TextStyle(color: rankColor, fontWeight: FontWeight.bold, letterSpacing: 2)),
               ),
             ),
+            const SizedBox(height: 24),
+
+            // SÉLECTEUR DE CLASSE
+            if (!_isGuest)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AuraColors.abyssalGrey,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      dropdownColor: AuraColors.abyssalGrey,
+                      value: _selectedGrade,
+                      hint: const Text("Sélectionne ta classe", style: TextStyle(color: Colors.white54, fontSize: 14)),
+                      icon: const Icon(Icons.keyboard_arrow_down, color: AuraColors.electricCyan),
+                      items: ['6ème', '5ème', '4ème', '3ème', 'Seconde', 'Première', 'Terminale'].map((String val) {
+                        return DropdownMenuItem<String>(
+                          value: val,
+                          child: Text(val, style: const TextStyle(color: Colors.white)),
+                        );
+                      }).toList(),
+                      onChanged: (newVal) async {
+                        if (newVal != null) {
+                          setState(() => _selectedGrade = newVal);
+                          final user = Supabase.instance.client.auth.currentUser;
+                          if (user != null) {
+                            try {
+                              await Supabase.instance.client
+                                  .from('profiles')
+                                  .update({'grade_level': newVal})
+                                  .eq('id', user.id);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Classe mise à jour ! 🎓"),
+                                    backgroundColor: AuraColors.mintNeon,
+                                  ),
+                                );
+                              }
+                            } catch(e) {
+                              print("Erreur maj classe: $e");
+                            }
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
 
             const SizedBox(height: 40),
 

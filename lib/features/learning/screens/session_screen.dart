@@ -23,7 +23,7 @@ class SessionScreen extends ConsumerStatefulWidget {
   ConsumerState<SessionScreen> createState() => _SessionScreenState();
 }
 
-class _SessionScreenState extends ConsumerState<SessionScreen> {
+class _SessionScreenState extends ConsumerState<SessionScreen> with SingleTickerProviderStateMixin {
   List<Question> _questions = [];
   bool _isLoading = true;
   int _currentIndex = 0;
@@ -32,12 +32,41 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   int? _selectedAnswerIndex;
   bool _isAnswered = false;
   String? _lauraMessage;
+  
+  late AnimationController _timerController;
 
   @override
   void initState() {
     super.initState();
     _lauraMessage = "Laura initialise la session...";
+    
+    _timerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    );
+    
+    _timerController.addStatusListener((status) {
+      if (status == AnimationStatus.completed && !_isAnswered) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Temps écoulé ! ⏱️"),
+              backgroundColor: Color(0xFFFF3366),
+              duration: Duration(milliseconds: 1500),
+            )
+          );
+        }
+        _checkAnswer(-1); // Timeout penalty
+      }
+    });
+
     _fetchQuestions();
+  }
+
+  @override
+  void dispose() {
+    _timerController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchQuestions() async {
@@ -49,6 +78,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
           _isLoading = false;
           _lauraMessage = "Prête ? Laura t'a préparé un quiz sur mesure ! ✨";
         });
+        _timerController.forward();
       }
       return;
     }
@@ -77,6 +107,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
           _isLoading = false;
           _lauraMessage = "Prête ? C'est parti !";
         });
+        _timerController.forward();
       }
     } catch (e) {
       if (mounted) {
@@ -92,6 +123,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
 
   Future<void> _checkAnswer(int index) async {
     if (_isAnswered) return;
+
+    _timerController.stop();
 
     setState(() {
       _selectedAnswerIndex = index;
@@ -158,6 +191,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
         _isAnswered = false;
         _lauraMessage = "Question suivante...";
       });
+      _timerController.forward(from: 0.0);
     } else {
       // 🏁 FIN DE SESSION
       
@@ -264,7 +298,57 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
+                      AnimatedBuilder(
+                        animation: _timerController,
+                        builder: (context, child) {
+                          double progress = 1.0 - _timerController.value;
+                          Color timerColor = AuraColors.mintNeon;
+                          if (progress <= 0.2) {
+                            timerColor = const Color(0xFFFF3366);
+                          } else if (progress <= 0.5) {
+                            timerColor = AuraColors.orange;
+                          }
+                          
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.timer_outlined, color: timerColor.withOpacity(0.8), size: 18),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        "Anti-Triche",
+                                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w600),
+                                      ),
+                                    ]
+                                  ),
+                                  Text(
+                                    "${(progress * 15).ceil()}s",
+                                    style: TextStyle(
+                                      color: timerColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor: Colors.white10,
+                                color: timerColor,
+                                borderRadius: BorderRadius.circular(10),
+                                minHeight: 6,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
                       FlashcardWidget(
                         subject: currentQuestion.subject,
                         question: currentQuestion.text,
