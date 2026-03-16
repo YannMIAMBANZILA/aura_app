@@ -232,53 +232,59 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 borderRadius: BorderRadius.circular(10),
                 minHeight: 8,
               ),
-              const SizedBox(height: 40),
-
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Container(
-                  key: ValueKey(_lauraMessage),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AuraColors.abyssalGrey,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 24),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.auto_awesome, color: AuraColors.mintNeon, size: 20),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          _lauraMessage ?? "...",
-                          style: const TextStyle(color: Colors.white70, fontSize: 14),
-                          textAlign: TextAlign.center,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Container(
+                          key: ValueKey(_lauraMessage),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AuraColors.abyssalGrey,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.auto_awesome, color: AuraColors.mintNeon, size: 20),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  _lauraMessage ?? "...",
+                                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+                      const SizedBox(height: 32),
+                      FlashcardWidget(
+                        subject: currentQuestion.subject,
+                        question: currentQuestion.text,
+                      ),
+                      const SizedBox(height: 48),
+                      ...List.generate(currentQuestion.options.length, (index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: _buildAnswerButton(
+                            text: currentQuestion.options[index],
+                            index: index,
+                            correctIndex: currentQuestion.correctOptionIndex,
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
-              const Spacer(),
-
-              FlashcardWidget(
-                subject: currentQuestion.subject,
-                question: currentQuestion.text,
-              ),
-              const Spacer(),
-
-              ...List.generate(currentQuestion.options.length, (index) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _buildAnswerButton(
-                    text: currentQuestion.options[index],
-                    index: index,
-                    correctIndex: currentQuestion.correctOptionIndex,
-                  ),
-                );
-              }),
-              const SizedBox(height: 20),
             ],
           ),
         ),

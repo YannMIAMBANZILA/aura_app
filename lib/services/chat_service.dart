@@ -102,6 +102,13 @@ class ChatService {
       }
       
       Le ton doit être pédagogique, encourageant (tu es Laura, une coach scolaire) et utiliser des emojis.
+      
+      INSTRUCTION VISUELLE IMPORTANTE :
+      Pour rendre le cours visuel, tu DOIS inclure au moins une image d'illustration dans le "content" de chaque partie de "full_summary" et dans "example" en utilisant cette syntaxe Markdown exacte :
+      ![Texte alternatif](https://image.pollinations.ai/prompt/{mots%20cles%20en%20anglais}?width=800&height=400&nologo=true)
+      ATTENTION : L'URL requiert que les {mots%20cles%20en%20anglais} soient traduits en anglais formel, séparés par `%20` au lieu des espaces. Pas d'espaces réels dans l'URL.
+      Exemple : ![Schéma du système solaire](https://image.pollinations.ai/prompt/solar%20system%20planets%20illustration?width=800&height=400&nologo=true)
+      
       IMPORTANT : Réponds UNIQUEMENT avec le JSON brut. Pas de texte avant ou après.
     """;
 

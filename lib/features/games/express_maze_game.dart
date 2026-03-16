@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'dart:math';
 class ExpressMazeGame extends StatefulWidget {
   const ExpressMazeGame({super.key});
 
@@ -14,11 +14,57 @@ class _ExpressMazeGameState extends State<ExpressMazeGame> {
   int _goalX = 5;
   int _goalY = 5;
   int _score = 0;
+  Set<int> _walls = {};
 
   @override
   void initState() {
     super.initState();
     _resetGame();
+  }
+
+  void _generateMaze() {
+    final rand = Random();
+    bool solvable = false;
+    
+    while (!solvable) {
+      _walls.clear();
+      // Increase difficulty by adding 14 obstacles
+      for (int i = 0; i < 14; i++) {
+        int wallIndex = rand.nextInt(_gridSize * _gridSize);
+        // Don't place wall on start or goal
+        if (wallIndex != 0 && wallIndex != (_gridSize * _gridSize - 1)) {
+          _walls.add(wallIndex);
+        }
+      }
+      solvable = _isSolvable();
+    }
+  }
+
+  bool _isSolvable() {
+    List<int> queue = [0];
+    Set<int> visited = {0};
+    
+    while (queue.isNotEmpty) {
+      int current = queue.removeAt(0);
+      if (current == (_gridSize * _gridSize - 1)) return true;
+      
+      int x = current % _gridSize;
+      int y = current ~/ _gridSize;
+      
+      List<int> neighbors = [];
+      if (x > 0) neighbors.add(current - 1);
+      if (x < _gridSize - 1) neighbors.add(current + 1);
+      if (y > 0) neighbors.add(current - _gridSize);
+      if (y < _gridSize - 1) neighbors.add(current + _gridSize);
+      
+      for (int n in neighbors) {
+        if (!_walls.contains(n) && !visited.contains(n)) {
+          visited.add(n);
+          queue.add(n);
+        }
+      }
+    }
+    return false;
   }
 
   void _resetGame() {
@@ -28,6 +74,7 @@ class _ExpressMazeGameState extends State<ExpressMazeGame> {
       // Change l'arrivée de manière aléatoire mais pas sur nous
       _goalX = (_gridSize - 1);
       _goalY = (_gridSize - 1);
+      _generateMaze();
     });
   }
 
@@ -37,19 +84,24 @@ class _ExpressMazeGameState extends State<ExpressMazeGame> {
       int newY = _playerY + dy;
 
       if (newX >= 0 && newX < _gridSize && newY >= 0 && newY < _gridSize) {
-        _playerX = newX;
-        _playerY = newY;
+        int newIndex = newY * _gridSize + newX;
+        
+        // Prevent moving into walls
+        if (!_walls.contains(newIndex)) {
+          _playerX = newX;
+          _playerY = newY;
 
-        if (_playerX == _goalX && _playerY == _goalY) {
-          _score++;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Arrivée atteinte ! +1 🏁"),
-              backgroundColor: Color(0xFF00E5FF),
-              duration: Duration(milliseconds: 800),
-            )
-          );
-          _resetGame();
+          if (_playerX == _goalX && _playerY == _goalY) {
+            _score++;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Arrivée atteinte ! +1 🏁"),
+                backgroundColor: Color(0xFF00E5FF),
+                duration: Duration(milliseconds: 800),
+              )
+            );
+            _resetGame();
+          }
         }
       }
     });
@@ -100,10 +152,12 @@ class _ExpressMazeGameState extends State<ExpressMazeGame> {
                       
                       bool isPlayer = (x == _playerX && y == _playerY);
                       bool isGoal = (x == _goalX && y == _goalY);
+                      bool isWall = _walls.contains(index);
 
                       return Container(
                         decoration: BoxDecoration(
-                          color: isPlayer ? const Color(0xFF00E5FF) : 
+                          color: isWall ? Colors.white24 :
+                                 isPlayer ? const Color(0xFF00E5FF) : 
                                  isGoal ? Colors.greenAccent.withOpacity(0.8) :
                                  Colors.white.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(8),

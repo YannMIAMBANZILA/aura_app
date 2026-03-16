@@ -13,6 +13,7 @@ import '../../../models/question.dart';
 import '../../../providers/user_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../dashboard/widgets/stats_charts.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class LessonCarouselScreen extends ConsumerStatefulWidget {
   final String subject;
@@ -32,6 +33,70 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _rewardAwarded = false;
+  
+  final FlutterTts _flutterTts = FlutterTts();
+  bool _isSpeaking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  void _initTts() async {
+    await _flutterTts.setLanguage("fr-FR");
+    await _flutterTts.setSpeechRate(0.5); // Normal speed
+    await _flutterTts.setPitch(1.2); // Cool voice pitch
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) setState(() => _isSpeaking = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _flutterTts.stop();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  String _getCurrentPageText(LessonContent content, int index) {
+    if (index == 0) return "Introduction. " + content.description;
+    
+    int summaryLength = content.fullSummary.length;
+    if (index <= summaryLength) {
+      final part = content.fullSummary[index - 1];
+      return "${part.title}. ${part.content}"; 
+    }
+    
+    int afterSum = index - summaryLength;
+    if (afterSum == 1) return "Exemple concret. " + content.example;
+    if (afterSum == 2) return "Point Pro. Métier : ${content.proPointCareer}. Application : ${content.proPointApplication}";
+    if (afterSum == 3) return "À retenir. ${content.keyPoints.join('. ')}";
+    if (afterSum == 4) return "C'est l'heure du check ! Laura a préparé quelques questions pour voir si tu as tout bien compris. Prêt ?";
+    if (afterSum == 5) return "Génère ta fiche de révision ! Laura peut créer une fiche personnalisée basée sur tes points clés.";
+    
+    return "";
+  }
+
+  void _toggleSpeak(LessonState state) async {
+    if (state.lessonContent == null) return;
+    
+    if (_isSpeaking) {
+      await _flutterTts.stop();
+      setState(() => _isSpeaking = false);
+    } else {
+      String textToSpeak = _getCurrentPageText(state.lessonContent!, _currentPage);
+      
+      // Nettoyage Markdown et Emojis pour la synthèse vocale
+      String cleanText = textToSpeak.replaceAll(RegExp(r'[*#_~`]'), '');
+      // Suppression des URL d'images Markdown ![alt](url)
+      cleanText = cleanText.replaceAll(RegExp(r'!\[.*?\]\([^)]+\)'), '');
+      cleanText = cleanText.replaceAll(RegExp(r'[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]', unicode: true), '');
+      
+      setState(() => _isSpeaking = true);
+      await _flutterTts.speak(cleanText);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +114,7 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, lessonState),
               Expanded(
                 child: _buildContent(lessonState),
               ),
@@ -61,7 +126,7 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, LessonState lessonState) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -91,6 +156,15 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
               ],
             ),
           ),
+          IconButton(
+            icon: Icon(
+              _isSpeaking ? Icons.volume_up : Icons.volume_mute,
+              color: AuraColors.electricCyan,
+              size: 28,
+            ),
+            onPressed: () => _toggleSpeak(lessonState),
+          ),
+          const SizedBox(width: 8),
           const CircleAvatar(
             radius: 20,
             backgroundImage: AssetImage('assets/images/laura_avatar.png'),
@@ -151,6 +225,12 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
     return PageView.builder(
       controller: _pageController,
       onPageChanged: (idx) {
+        // Couper la voix lorsqu'on change de page
+        if (_isSpeaking) {
+          _flutterTts.stop();
+          setState(() => _isSpeaking = false);
+        }
+        
         setState(() => _currentPage = idx);
         
         // 💡 RÉCOMPENSE : Si on arrive à la fin (Fiche de révision)
@@ -285,6 +365,33 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
           p: GoogleFonts.inter(color: Colors.white70, fontSize: 16, height: 1.6),
           strong: const TextStyle(color: AuraColors.mintNeon),
         ),
+        imageBuilder: (uri, title, alt) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                uri.toString(),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(
+                        color: AuraColors.electricCyan,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -294,9 +401,38 @@ class _LessonCarouselScreenState extends ConsumerState<LessonCarouselScreen> {
       title: "Exemple Concret",
       icon: Icons.rocket_launch_outlined,
       accentColor: AuraColors.purple,
-      child: Text(
-        example,
-        style: GoogleFonts.inter(color: Colors.white70, fontSize: 16, height: 1.6, fontStyle: FontStyle.italic),
+      child: MarkdownBody(
+        data: example,
+        styleSheet: MarkdownStyleSheet(
+          p: GoogleFonts.inter(color: Colors.white70, fontSize: 16, height: 1.6, fontStyle: FontStyle.italic),
+        ),
+        imageBuilder: (uri, title, alt) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                uri.toString(),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(
+                        color: AuraColors.purple,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }
