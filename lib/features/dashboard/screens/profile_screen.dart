@@ -9,6 +9,7 @@ import 'package:aura_app/features/dashboard/widgets/stats_charts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aura_app/providers/user_provider.dart';
 import 'package:aura_app/features/learning/screens/revision_card_list_screen.dart';
+import 'package:aura_app/features/agenda/screens/timetable_setup_screen.dart';
 
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -212,6 +213,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             const SizedBox(height: 40),
             
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF00E5FF), // Texte et icône en Cyan
+                  side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5), // Bordure Cyan
+                  minimumSize: const Size(double.infinity, 55), // Prend toute la largeur
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  backgroundColor: const Color(0xFF00E5FF).withOpacity(0.05), // Léger fond bleuté
+                ),
+                icon: const Icon(Icons.calendar_today, size: 22),
+                label: const Text(
+                  'Mon Emploi du Temps',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TimetableSetupScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 30), // Espace avant "GALERIE DES SCEAUX"
+
             // 2.5 GALERIE DES SCEAUX
             Center(child: Text("GALERIE DES SCEAUX", style: AuraTextStyles.subtitle, textAlign: TextAlign.center)),
             const SizedBox(height: 16),
