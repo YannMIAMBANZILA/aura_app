@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aura_app/providers/user_provider.dart';
 import 'package:aura_app/features/learning/screens/revision_card_list_screen.dart';
 import 'package:aura_app/features/agenda/screens/timetable_setup_screen.dart';
+import 'package:aura_app/features/agenda/screens/deadlines_screen.dart';
 
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -215,33 +216,84 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF00E5FF), // Texte et icône en Cyan
-                  side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5), // Bordure Cyan
-                  minimumSize: const Size(double.infinity, 55), // Prend toute la largeur
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  backgroundColor: const Color(0xFF00E5FF).withOpacity(0.05), // Léger fond bleuté
-                ),
-                icon: const Icon(Icons.calendar_today, size: 22),
-                label: const Text(
-                  'Mon Emploi du Temps',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TimetableSetupScreen(),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF00E5FF), // Texte et icône en Cyan
+                        side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5), // Bordure Cyan
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        backgroundColor: const Color(0xFF00E5FF).withOpacity(0.05), // Léger fond bleuté
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TimetableSetupScreen(),
+                          ),
+                        );
+                      },
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.calendar_today, size: 24),
+                          SizedBox(height: 8),
+                          Text(
+                            'Emploi du Temps',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.0,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF00E5FF),
+                        side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        backgroundColor: const Color(0xFF00E5FF).withOpacity(0.05),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DeadlinesScreen(),
+                          ),
+                        );
+                      },
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.assignment_outlined, size: 24),
+                          SizedBox(height: 8),
+                          Text(
+                            'Devoirs & DS',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.0,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 30), // Espace avant "GALERIE DES SCEAUX"
