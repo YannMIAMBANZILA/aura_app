@@ -11,6 +11,7 @@ import 'package:aura_app/providers/user_provider.dart';
 import 'package:aura_app/features/learning/screens/revision_card_list_screen.dart';
 import 'package:aura_app/features/agenda/screens/timetable_setup_screen.dart';
 import 'package:aura_app/features/agenda/screens/deadlines_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Map<String, dynamic>? _profileData;
   List<dynamic> _history = [];
   String? _selectedGrade;
+  String _recapTime = '17:30';
+  String _reminderTime = '19:00';
+  int _deadlineDaysBefore = 2;
+
 
   @override
   void initState() {
@@ -61,7 +66,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         setState(() {
           _profileData = profileResponse;
           _selectedGrade = profileResponse['grade_level'] as String?;
+          _recapTime = profileResponse['recap_time'] ?? '17:30';
+          _reminderTime = profileResponse['reminder_time'] ?? '19:00';
+          _deadlineDaysBefore = profileResponse['deadline_days_before'] ?? 2;
           _history = historyResponse;
+
           _isLoading = false;
         });
       }
@@ -70,6 +79,82 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  Future<void> _updatePreference(String column, dynamic newValue) async {
+    final dynamic oldValue = column == 'recap_time' ? _recapTime :
+                             column == 'reminder_time' ? _reminderTime :
+                             _deadlineDaysBefore;
+
+    setState(() {
+      if (column == 'recap_time') _recapTime = newValue as String;
+      else if (column == 'reminder_time') _reminderTime = newValue as String;
+      else if (column == 'deadline_days_before') _deadlineDaysBefore = newValue as int;
+    });
+
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      try {
+        await Supabase.instance.client
+            .from('profiles')
+            .update({column: newValue})
+            .eq('id', user.id);
+            
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Préférences mises à jour ! 🔔", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              backgroundColor: AuraColors.electricCyan,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        print("Erreur update preferences: $e");
+        setState(() {
+          if (column == 'recap_time') _recapTime = oldValue as String;
+          else if (column == 'reminder_time') _reminderTime = oldValue as String;
+          else if (column == 'deadline_days_before') _deadlineDaysBefore = oldValue as int;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickTime(String column, String currentTimeStr) async {
+    final parts = currentTimeStr.split(':');
+    final initialTime = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 17, 
+      minute: int.tryParse(parts.length > 1 ? parts[1] : '30') ?? 30,
+    );
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AuraColors.electricCyan,
+              onPrimary: AuraColors.abyssalGrey,
+              surface: AuraColors.abyssalGrey,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final formattedHour = picked.hour.toString().padLeft(2, '0');
+      final formattedMinute = picked.minute.toString().padLeft(2, '0');
+      final formattedTime = '$formattedHour:$formattedMinute';
+      
+      if (formattedTime != currentTimeStr) {
+        await _updatePreference(column, formattedTime);
+      }
+    }
+  }
+
 
   Color _getRankColor(int score) {
     if (score < 1000) return Colors.white54;
@@ -194,7 +279,89 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
+
+            // NOUVELLE SECTION : PRÉFÉRENCES DE COACHING
+            if (!_isGuest) ...[
+              const Divider(color: Colors.white10),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  "PRÉFÉRENCES DE COACHING", 
+                  style: AuraTextStyles.subtitle, 
+                  textAlign: TextAlign.center
+                )
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: AuraColors.abyssalGrey,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.history_edu, color: AuraColors.electricCyan),
+                      title: const Text("Récapitulatif des cours", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      subtitle: const Text("L'heure à laquelle Laura fait le point sur ta journée.", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      trailing: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AuraColors.electricCyan,
+                          backgroundColor: AuraColors.electricCyan.withOpacity(0.1),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => _pickTime('recap_time', _recapTime),
+                        child: Text(_recapTime, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const Divider(color: Colors.white10, height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.alarm, color: AuraColors.electricCyan),
+                      title: const Text("Rappel quotidien", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      subtitle: const Text("Pour ne pas briser ton Streak.", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      trailing: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AuraColors.electricCyan,
+                          backgroundColor: AuraColors.electricCyan.withOpacity(0.1),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => _pickTime('reminder_time', _reminderTime),
+                        child: Text(_reminderTime, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const Divider(color: Colors.white10, height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.warning_amber_rounded, color: AuraColors.electricCyan),
+                      title: const Text("Alerte Devoirs/DS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      subtitle: const Text("Jours de préavis avant une échéance.", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      trailing: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          dropdownColor: AuraColors.abyssalGrey,
+                          value: _deadlineDaysBefore,
+                          icon: const Icon(Icons.keyboard_arrow_down, color: AuraColors.electricCyan),
+                          items: [1, 2, 3, 5, 7].map((int val) {
+                            return DropdownMenuItem<int>(
+                              value: val,
+                              child: Text(
+                                "$val jour${val > 1 ? 's' : ''}", 
+                                style: const TextStyle(color: AuraColors.electricCyan, fontWeight: FontWeight.bold)
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newVal) {
+                            if (newVal != null && newVal != _deadlineDaysBefore) {
+                              _updatePreference('deadline_days_before', newVal);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
 
             // 2. STATS RAPIDES (Ligne de 3)
             Row(
