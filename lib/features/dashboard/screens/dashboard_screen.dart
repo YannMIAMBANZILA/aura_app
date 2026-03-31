@@ -10,6 +10,7 @@ import '../../auth/screens/login_screen.dart';
 import 'profile_screen.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/agenda_service.dart';
+import '../../../models/agenda_models.dart';
 import '../../chat/screens/chat_screen.dart';
 import '../../learning/screens/lesson_selection_screen.dart';
 
@@ -25,8 +26,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String? _username;
   bool _isGuest = true;
   static bool _hasShownRecapPopup = false;
+  static bool _hasShownDeadlinePopup = false;
   List<String> _todaySubjects = [];
   String _recapTime = '17:30';
+  int _deadlineDaysBefore = 2; // Délai d'alerte par défaut
 
   String selectedSubject = 'Maths'; // Matière par défaut
 
@@ -52,7 +55,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       try {
         final data = await Supabase.instance.client
             .from('profiles')
-            .select('username, last_study_date, recap_time')
+            .select('username, last_study_date, recap_time, deadline_days_before')
             .eq('id', user.id)
             .single();
 
@@ -61,6 +64,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             _username = data['username'];
             if (data['recap_time'] != null) {
               _recapTime = data['recap_time'];
+            }
+            if (data['deadline_days_before'] != null) {
+              _deadlineDaysBefore = data['deadline_days_before'];
             }
           });
         }
@@ -79,6 +85,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
         // Vérification du récapitulatif
         await _checkRecap();
+
+        // Vérification des DS
+        await _checkDeadlines();
 
       } catch (e) {
         // En cas d'erreur silencieuse
@@ -129,6 +138,134 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } catch (e) {
       print("Erreur checkRecap: $e");
     }
+  }
+
+  Future<void> _checkDeadlines() async {
+    if (_isGuest || _hasShownDeadlinePopup) return;
+    try {
+      final deadlines = await AgendaService().getMyDeadlines();
+      final now = DateTime.now();
+      final todayAtMidnight = DateTime(now.year, now.month, now.day);
+      
+      DeadlineTask? closestDS;
+      int minDays = 999;
+      
+      for (final task in deadlines) {
+        if (task.taskType == 'DS' && !task.isCompleted) {
+          final dueAtMidnight = DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
+          final diff = dueAtMidnight.difference(todayAtMidnight).inDays;
+          
+          if (diff >= 0 && diff <= _deadlineDaysBefore) {
+            if (diff < minDays) {
+              minDays = diff;
+              closestDS = task;
+            }
+          }
+        }
+      }
+      
+      if (closestDS != null && mounted) {
+        _hasShownDeadlinePopup = true;
+
+        String daysText = "est aujourd'hui !";
+        if (minDays == 1) {
+          daysText = "est dans 1 jour !";
+        } else if (minDays > 1) {
+          daysText = "est dans $minDays jours !";
+        }
+
+        NotificationService().showDeadlineNotification(closestDS.subject, daysText);
+        _showDeadlineDialog(closestDS, daysText, minDays);
+      }
+    } catch (e) {
+      print("Erreur checkDeadlines: $e");
+    }
+  }
+
+  void _showDeadlineDialog(DeadlineTask task, String daysText, int daysUntil) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: AuraColors.deepSpaceBlue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AuraColors.softCoral, width: 2),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: AuraColors.softCoral, size: 28),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Alerte DS Imminent",
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "Ton évaluation de ${task.subject} $daysText",
+                  style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AuraColors.softCoral,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context); // Fermer le modal
+                      
+                      String sujetPrecis = (task.description != null && task.description!.isNotEmpty) 
+                          ? " Le sujet exact du DS porte sur : ${task.description}." 
+                          : "";
+
+                      final String message = "Salut Laura ! 🚨 J'ai un DS de ${task.subject} prévu ${daysUntil == 0 ? "aujourd'hui" : "dans $daysUntil jours"}.$sujetPrecis Peux-tu me proposer un programme de révision ultra-ciblé et me poser une première question sur ce sujet précis pour évaluer mon niveau actuel ?";
+                      
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ChatScreen(initialMessage: message)),
+                      );
+                    },
+                    icon: const Icon(Icons.model_training, color: Colors.white), 
+                    label: Text(
+                      "GÉNÉRER UN PLAN",
+                      style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Plus tard", style: TextStyle(color: Colors.white38)),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showRecapDialog(List<String> subjects, String subjectsText) {

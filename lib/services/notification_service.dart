@@ -92,4 +92,20 @@ class NotificationService {
       ),
     );
   }
+
+  Future<void> showDeadlineNotification(String subject, String daysText) async {
+    await _notifications.show(
+      400, 
+      '🚨 Alerte DS Imminent', 
+      'Ton évaluation de $subject $daysText', 
+      const NotificationDetails( 
+        android: AndroidNotificationDetails(
+          'aura_deadline', 
+          'Alertes Deadlines Aura',
+          importance: Importance.max,
+          priority: Priority.max,
+        ),
+      ),
+    );
+  }
 }
