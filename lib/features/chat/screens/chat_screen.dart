@@ -14,7 +14,8 @@ import '../providers/chat_provider.dart';
 import '../../../providers/user_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key});
+  final String? initialMessage;
+  const ChatScreen({super.key, this.initialMessage});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -39,6 +40,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _initTts();
     _initSpeech();
+
+    if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(chatProvider.notifier).sendMessage(widget.initialMessage!);
+        _scrollToBottom();
+      });
+    }
   }
 
   void _initSpeech() async {

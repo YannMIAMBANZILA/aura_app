@@ -9,6 +9,7 @@ import '../../../providers/user_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import 'profile_screen.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/agenda_service.dart';
 import '../../chat/screens/chat_screen.dart';
 import '../../learning/screens/lesson_selection_screen.dart';
 
@@ -23,6 +24,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String? _username;
   bool _isGuest = true;
+  static bool _hasShownRecapPopup = false;
+  List<String> _todaySubjects = [];
+  String _recapTime = '17:30';
 
   String selectedSubject = 'Maths'; // Matière par défaut
 
@@ -48,13 +52,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       try {
         final data = await Supabase.instance.client
             .from('profiles')
-            .select('username, last_study_date')
+            .select('username, last_study_date, recap_time')
             .eq('id', user.id)
             .single();
 
         if (mounted && data['username'] != null) {
           setState(() {
             _username = data['username'];
+            if (data['recap_time'] != null) {
+              _recapTime = data['recap_time'];
+            }
           });
         }
         
@@ -70,6 +77,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         // Programme le rappel quotidien
         await NotificationService().scheduleDailyReminder(hasStudiedToday);
 
+        // Vérification du récapitulatif
+        await _checkRecap();
 
       } catch (e) {
         // En cas d'erreur silencieuse
@@ -78,7 +87,132 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  // Widget avec l'effet de Halo
+  Future<void> _checkRecap() async {
+    if (_isGuest || _hasShownRecapPopup) return;
+    try {
+      final timetable = await AgendaService().getMyTimetable();
+      final now = DateTime.now();
+      
+      final todayEntries = timetable.where((e) => e.dayOfWeek == now.weekday).toList();
+      
+      if (todayEntries.isNotEmpty) {
+        final timeParts = _recapTime.split(':');
+        final recapHour = int.tryParse(timeParts[0]) ?? 17;
+        final recapMinute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '30') ?? 30;
+        
+        final recapDateTime = DateTime(now.year, now.month, now.day, recapHour, recapMinute);
+        
+        if (now.isAfter(recapDateTime)) {
+          final subjects = todayEntries.map((e) => e.subject).toSet().toList();
+          if (mounted) {
+            _hasShownRecapPopup = true;
+            setState(() {
+              _todaySubjects = subjects;
+            });
+            
+            // Format subjects text
+            String subjectsText = '';
+            if (subjects.length == 1) {
+              subjectsText = subjects.first;
+            } else if (subjects.length == 2) {
+              subjectsText = "${subjects[0]} et ${subjects[1]}";
+            } else {
+              subjectsText = "${subjects.take(subjects.length - 1).join(', ')} et ${subjects.last}";
+            }
+
+            // Affiche la notification et le popup
+            NotificationService().showRecapNotification(subjectsText);
+            _showRecapDialog(subjects, subjectsText);
+          }
+        }
+      }
+    } catch (e) {
+      print("Erreur checkRecap: $e");
+    }
+  }
+
+  void _showRecapDialog(List<String> subjects, String subjectsText) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: AuraColors.deepSpaceBlue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AuraColors.electricCyan, width: 2),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("✨", style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Ta journée est terminée !",
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text("✨", style: TextStyle(fontSize: 24)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "Tu as eu $subjectsText aujourd'hui.\nPrêt(e) pour un récap rapide ?",
+                  style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AuraColors.electricCyan,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context); // Ferme le modal d'abord
+                      final String joinedSubjects = subjects.join(', ');
+                      final String message = "Salut Laura ! ✨ Je suis prêt pour mon récapitulatif d'aujourd'hui. Voici les matières que j'ai eues : $joinedSubjects. Par quelle matière veux-tu commencer pour me tester ?";
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ChatScreen(initialMessage: message)),
+                      );
+                    },
+                    icon: const Icon(Icons.flash_on),
+                    label: Text(
+                      "LANCER",
+                      style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Pour fermer et voir plus tard
+                  },
+                  child: const Text("Plus tard", style: TextStyle(color: Colors.white38)),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
   Widget _buildSubjectChip(Map<String, dynamic> subject) {
     bool isSelected = selectedSubject == subject['name'];
     Color color = subject['color'];

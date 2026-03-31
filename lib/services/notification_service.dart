@@ -76,4 +76,20 @@ class NotificationService {
       ),
     );
   }
+
+  Future<void> showRecapNotification(String subjectsText) async {
+    await _notifications.show(
+      300, 
+      '✨ Ta journée est terminée !', 
+      'Tu as eu $subjectsText aujourd\'hui. Prêt(e) pour un récap rapide ?', 
+      const NotificationDetails( 
+        android: AndroidNotificationDetails(
+          'aura_recap', 
+          'Récapitulatifs Aura',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
 }
