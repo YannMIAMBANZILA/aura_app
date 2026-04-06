@@ -736,7 +736,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     onTap: () {
                       Navigator.pop(context); // Ferme le modal
                       if (isQuiz) {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => SessionScreen(subject: s['name'])));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LessonSelectionScreen(
+                              subject: s['name'],
+                              subjectColor: s['color'],
+                              gradeLevel: _gradeLevel ?? 'Général',
+                              isQuizMode: true,
+                            ),
+                          ),
+                        );
                       } else {
                         Navigator.push(
                           context,

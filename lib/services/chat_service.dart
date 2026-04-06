@@ -191,4 +191,52 @@ class ChatService {
       return "Une erreur est survenue lors de la création de ta fiche. Tu peux quand même la rédiger toi-même !";
     }
   }
+
+  Future<Map<String, dynamic>> generateQuiz(String gradeLevel, String subject, String chapter) async {
+    final prompt = """
+Tu es un professeur de $subject pour des élèves de classe de $gradeLevel. Génère un QCM de 6 questions sur le chapitre '$chapter'. Tu dois renvoyer STRICTEMENT un objet JSON valide contenant une liste 'questions'. Chaque question doit avoir : 'question' (texte), 'options' (liste de 4 choix), 'correctAnswerIndex' (entier de 0 à 3), et 'explanation' (courte explication de la bonne réponse). N'inclus aucun texte avant ou après le JSON.
+""";
+
+    int retryCount = 0;
+    const maxRetries = 2;
+
+    while (retryCount <= maxRetries) {
+      try {
+        final model = GenerativeModel(
+          model: 'gemini-2.5-flash', 
+          apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
+        );
+        
+        final response = await model.generateContent([
+          Content.text(prompt)
+        ], safetySettings: [
+          SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
+          SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
+          SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
+          SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
+        ]);
+
+        var text = response.text;
+        
+        if (text == null || text.isEmpty) {
+          throw Exception("Réponse vide de l'IA (peut-être bloquée par les filtres)");
+        }
+        
+        final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+        if (jsonMatch != null) {
+          text = jsonMatch.group(0)!;
+        }
+
+        return jsonDecode(text);
+      } catch (e) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          await Future.delayed(const Duration(seconds: 3));
+          continue;
+        }
+        rethrow;
+      }
+    }
+    throw Exception("Échec après plusieurs tentatives.");
+  }
 }
