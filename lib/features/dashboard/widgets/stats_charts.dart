@@ -4,6 +4,7 @@ import 'package:aura_app/config/theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:aura_app/config/subjects_config.dart';
 
 // Modèle pour les stats
 // Provider pour l'onglet de temps (Jour, Semaine, Mois)
@@ -44,6 +45,16 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
   }
 
   try {
+    String? gradeLevel;
+    try {
+      final profileResponse = await Supabase.instance.client
+          .from('profiles')
+          .select('grade_level')
+          .eq('id', user.id)
+          .single();
+      gradeLevel = profileResponse['grade_level'] as String?;
+    } catch (_) {}
+
     final response = await Supabase.instance.client
         .from('study_sessions')
         .select()
@@ -51,6 +62,12 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
 
     final List<dynamic> data = response as List<dynamic>;
     Map<String, int> distribution = {};
+    
+    final expectedSubjects = SubjectsConfig.getSubjectsForGrade(gradeLevel);
+    for (var s in expectedSubjects) {
+      distribution[s['name'] as String] = 0;
+    }
+
     Map<String, int> activityMap = {};
     List<String> labels = [];
 
@@ -68,8 +85,8 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
         activityMap[date.weekday.toString()] = (activityMap[date.weekday.toString()] ?? 0) + 1;
         
         String? subject = session['subject'] as String?;
-        if (subject != null && subject != 'Général' && subject.isNotEmpty) {
-          distribution[subject] = (distribution[subject] ?? 0) + 1;
+        if (subject != null && distribution.containsKey(subject)) {
+          distribution[subject] = distribution[subject]! + 1;
         }
       }
     } else if (timeframe == Timeframe.day) {
@@ -89,8 +106,8 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
         }
         
         String? subject = session['subject'] as String?;
-        if (subject != null && subject != 'Général' && subject.isNotEmpty) {
-          distribution[subject] = (distribution[subject] ?? 0) + 1;
+        if (subject != null && distribution.containsKey(subject)) {
+          distribution[subject] = distribution[subject]! + 1;
         }
       }
     } else {
@@ -103,8 +120,8 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
           activityMap[date.month.toString()] = (activityMap[date.month.toString()] ?? 0) + 1;
         }
         String? subject = session['subject'] as String?;
-        if (subject != null && subject != 'Général' && subject.isNotEmpty) {
-          distribution[subject] = (distribution[subject] ?? 0) + 1;
+        if (subject != null && distribution.containsKey(subject)) {
+          distribution[subject] = distribution[subject]! + 1;
         }
       }
     }
@@ -147,7 +164,7 @@ final statsProvider = FutureProvider<AuraStats>((ref) async {
 
     return AuraStats(
       activityGroups: groups,
-      subjectDistribution: distribution.isEmpty ? {'Maths':0, 'Français':0, 'Physique':0} : distribution,
+      subjectDistribution: distribution,
       maxY: mY,
       xLabels: labels,
     );

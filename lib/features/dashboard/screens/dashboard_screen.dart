@@ -13,6 +13,7 @@ import '../../../services/agenda_service.dart';
 import '../../../models/agenda_models.dart';
 import '../../chat/screens/chat_screen.dart';
 import '../../learning/screens/lesson_selection_screen.dart';
+import '../../../config/subjects_config.dart';
 
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -31,16 +32,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String _recapTime = '17:30';
   int _deadlineDaysBefore = 2; // Délai d'alerte par défaut
 
+  String? _gradeLevel;
   String selectedSubject = 'Maths'; // Matière par défaut
 
-  final List<Map<String, dynamic>> subjects = [
-    {'name': 'Maths', 'icon': Icons.calculate, 'color': AuraColors.cyan},
-    {'name': 'Français', 'icon': Icons.menu_book, 'color': AuraColors.purple},
-    {'name': 'Physique', 'icon': Icons.science, 'color': AuraColors.green},
-    {'name': 'Histoire', 'icon': Icons.history_edu, 'color': AuraColors.orange},
-    {'name': 'Anglais', 'icon': Icons.translate, 'color': AuraColors.cyan},
-    {'name': 'Philo', 'icon': Icons.psychology, 'color': AuraColors.purple},
-  ];
+  List<Map<String, dynamic>> get subjects {
+    return SubjectsConfig.getSubjectsForGrade(_gradeLevel);
+  }
 
   @override
   void initState() {
@@ -55,7 +52,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       try {
         final data = await Supabase.instance.client
             .from('profiles')
-            .select('username, last_study_date, recap_time, deadline_days_before')
+            .select('username, last_study_date, recap_time, deadline_days_before, grade_level')
             .eq('id', user.id)
             .single();
 
@@ -67,6 +64,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             }
             if (data['deadline_days_before'] != null) {
               _deadlineDaysBefore = data['deadline_days_before'];
+            }
+            if (data['grade_level'] != null) {
+              _gradeLevel = data['grade_level'];
             }
           });
         }
@@ -615,12 +615,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   _buildDrawerTile(
                     icon: Icons.person_outline_rounded,
                     title: "Profil élève",
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
                       if (_isGuest) {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                        _checkUser();
                       } else {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                        _checkUser();
                       }
                     },
                   ),
@@ -742,6 +744,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             builder: (_) => LessonSelectionScreen(
                               subject: s['name'],
                               subjectColor: s['color'],
+                              gradeLevel: _gradeLevel ?? 'Général',
                             ),
                           ),
                         );

@@ -7,15 +7,18 @@ import 'lesson_carousel_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/lesson_provider.dart';
 import '../../games/loading_game_screen.dart';
+import '../../../config/curriculum_config.dart';
 
 class LessonSelectionScreen extends ConsumerStatefulWidget {
   final String subject;
   final Color subjectColor;
+  final String gradeLevel;
 
   const LessonSelectionScreen({
     super.key,
     required this.subject,
     required this.subjectColor,
+    required this.gradeLevel,
   });
 
   @override
@@ -23,18 +26,9 @@ class LessonSelectionScreen extends ConsumerStatefulWidget {
 }
 
 class _LessonSelectionScreenState extends ConsumerState<LessonSelectionScreen> {
-  final Map<String, List<String>> _subjectChapters = {
-    'Maths': ['Théorème de Thalès', 'Théorème de Pythagore', 'Calcul Littéral', 'Fonctions Affines', 'Probabilités'],
-    'Français': ['L\'Accord du Participe Passé', 'Figures de Style', 'Analyse Linéaire', 'Le Surréalisme'],
-    'Physique': ['Lois de Newton', 'Optique Géométrique', 'Électricité de base', 'L\'Atome'],
-    'Histoire': ['La Seconde Guerre Mondiale', 'La Guerre Froide', 'La Révolution Française', 'La Renaissance'],
-    'Anglais': ['Present Perfect vs Simple Past', 'Passive Voice', 'Relative Clauses', 'Conditionals'],
-    'Philo': ['La Conscience', 'Le Bonheur', 'La Liberté', 'Le Travail et la Technique'],
-  };
-
   @override
   Widget build(BuildContext context) {
-    final chapters = _subjectChapters[widget.subject] ?? ['Généralités'];
+    final chapters = CurriculumConfig.getChapters(widget.gradeLevel, widget.subject);
 
     return Scaffold(
       appBar: AppBar(
