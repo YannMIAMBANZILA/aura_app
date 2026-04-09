@@ -8,6 +8,8 @@ import '../../learning/screens/session_screen.dart';
 import '../../../providers/user_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import 'profile_screen.dart';
+import 'settings_screen.dart';
+import 'legal_notice_screen.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/agenda_service.dart';
 import '../../../models/agenda_models.dart';
@@ -630,8 +632,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     icon: Icons.gavel_rounded,
                     title: "Mentions légales",
                     onTap: () {
-                      // Action pour mentions légales
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LegalNoticeScreen()),
+                      );
                     },
                   ),
                   _buildDrawerTile(
@@ -654,8 +659,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     icon: Icons.settings_outlined,
                     title: "Paramètres de l'app",
                     onTap: () {
-                      // Action pour paramètres
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      );
                     },
                   ),
                 ],

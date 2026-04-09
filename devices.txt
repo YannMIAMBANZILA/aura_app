@@ -1,0 +1,10 @@
+﻿Found 3 connected devices:
+  SM A356B (mobile) ÔÇó RFCX607NBBP ÔÇó android-arm64  ÔÇó Android 16 (API 36)
+  Windows (desktop) ÔÇó windows     ÔÇó windows-x64    ÔÇó Microsoft Windows [version 10.0.26200.8037]
+  Edge (web)        ÔÇó edge        ÔÇó web-javascript ÔÇó Microsoft Edge 146.0.3856.97
+
+Device emulator-5554 is offline.
+
+Run "flutter emulators" to list and start any available device emulators.
+
+If you expected another device to be detected, please run "flutter doctor" to diagnose potential issues. You may also try increasing the time to wait for connected devices with the "--device-timeout" flag. Visit https://flutter.dev/setup/ for troubleshooting tips.
